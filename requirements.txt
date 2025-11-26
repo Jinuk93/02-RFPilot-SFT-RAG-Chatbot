@@ -28,7 +28,7 @@ FlagEmbedding>=1.2.0,<2.0.0
 rapidfuzz>=3.0.0,<4.0.0
 
 # ===== GGUF 모델 지원 (CPU 버전) =====
-llama-cpp-python>=0.2.0,<0.4.0
+# llama-cpp-python>=0.2.0,<0.4.0
 
 # ===== Hugging Face Hub =====
 huggingface-hub>=0.20.0
