@@ -1,0 +1,8 @@
+# Git LFS로 추적할 대용량 파일
+chroma_db/** filter=lfs diff=lfs merge=lfs -text
+data/rag_chunks_final.csv filter=lfs diff=lfs merge=lfs -text
+
+# 바이너리 파일 명시
+*.db filter=lfs diff=lfs merge=lfs -text
+*.sqlite filter=lfs diff=lfs merge=lfs -text
+*.sqlite3 filter=lfs diff=lfs merge=lfs -text
