@@ -14,7 +14,11 @@ license: mit
 ## 챗봇 서비스 시연
 ![chatbot_final](https://github.com/user-attachments/assets/1b321abb-6ba1-4063-be97-300036d8047a)
 
-## 벡터 DB 대시보드 영상
+## 벡터 DB 대시보드 영상(별도 서비스화 진행중)
+[접속 링크](https://vectordb-dashboard-dong.streamlit.app/)
+
+![Vector_DB_v1](https://github.com/user-attachments/assets/1b12ecf9-a105-44c7-82a4-67744d82931b)
+
 
 # 1. 프로젝트 개요
 - **B2G 입찰지원 전문 컨설팅 스타트업 – 'RFPilot'**
@@ -97,14 +101,10 @@ python main.py --step embed         # 임베딩만
 python main.py --step vectordb      # 벡터DB만
 ```
 
-**2. 벡터 DB 대시보드 (개발 중)**
-```powershell
-# 벡터 DB 내용 확인 및 검색 테스트
-streamlit run src/visualization/streamlit_app.py
-```
+**2. 벡터 DB 대시보드 (별도 서비스로 전환)**
 
-> 📝 **Note**: 벡터 DB 대시보드는 별도 저장소로 분리 예정  
-> 추후 링크: [입찰메이트-VectorDB-Dashboard](#) (준비 중)
+> 📝 **Note**: 벡터 DB 대시보드는 별도 저장소로 분리  
+> 접속 링크: [입찰메이트-VectorDB-Dashboard](https://vectordb-dashboard-dong.streamlit.app/) (Chroma DB만 가능)
 
 **3. 챗봇 로컬 테스트**
 ```powershell
@@ -147,7 +147,6 @@ CODEIT-AI-1TEAM-LLM-PROJECT/
 │   ├── embedding/           # 임베딩, 벡터DB 생성
 │   ├── retriever/           # 문서 검색기
 │   ├── generator/           # 응답 생성기
-│   ├── visualization/       # UI 구성
 │   └── utils/               # 공통 함수 모듈
 └── README.md
 ```
@@ -162,7 +161,6 @@ CODEIT-AI-1TEAM-LLM-PROJECT/
 - `src/retriever`: 사용자 질문에 대한 관련 문서를 벡터DB에서 검색합니다.
 - `src/generator`: 검색된 문서 기반으로 LLM이 응답을 생성합니다.
 - `src/notebooks`: 로컬 모델을 Fine-Tuning하여 양자화 파일을 생성합니다.
-- `src/visualization`: Streamlit 기반 사용자 인터페이스를 구성합니다.
 - `src/utils`: 설정 확인, 경로 설정 등 공통 유틸리티 함수들을 포함합니다.
 
 # 4. 팀 소개
