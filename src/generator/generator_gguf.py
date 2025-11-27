@@ -124,10 +124,18 @@ class GGUFGenerator:
                 n_gpu_layers=self.n_gpu_layers,
                 n_ctx=self.n_ctx,
                 n_threads=self.n_threads,
-                verbose=False,
+                verbose=True,  # ✅ 디버그 로그 활성화
             )
             
+            # ✅ 실제 적용된 n_ctx 확인
+            actual_n_ctx = self.model.n_ctx()
             logger.info("✅ GGUF 모델 로드 완료!")
+            logger.info(f"   - 설정한 n_ctx: {self.n_ctx}")
+            logger.info(f"   - 실제 n_ctx: {actual_n_ctx}")
+            
+            if actual_n_ctx < self.n_ctx:
+                logger.warning(f"⚠️ n_ctx가 예상보다 작습니다: {actual_n_ctx} < {self.n_ctx}")
+                logger.warning(f"   메모리 부족일 수 있습니다. n_gpu_layers를 줄여보세요.")
             
         except FileNotFoundError as e:
             logger.error(f"❌ 모델 파일을 찾을 수 없습니다: {e}")
@@ -217,11 +225,17 @@ class GGUFGenerator:
                 top_p=top_p,
                 echo=False,  # 프롬프트 반복 안 함
                 stop=[
+                    # 구분자
                     "###", "\n\n###", 
                     "### 사용자", "\n사용자:", 
                     "</s>",
-                    "한국어 답변", "한국어로 답변", "지침:",  # 메타 텍스트 차단
-                    "문장", "(문장"  # 메타 번호 차단
+                    # 메타 텍스트 차단
+                    "한국어 답변", "한국어로 답변", "지침:",
+                    "문장", "(문장",
+                    # ✅ 질문 패턴 차단 (답변 후 질문 생성 방지)
+                    "\n\n",  # 단락 구분
+                    "?",     # 질문 기호
+                    "요?", "까?", "나요?", "습니까?"  # 질문 어미
                 ],
             )
             
