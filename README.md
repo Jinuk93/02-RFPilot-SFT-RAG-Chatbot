@@ -178,8 +178,8 @@ CODEIT-AI-1TEAM-LLM-PROJECT/
 ## 👨🏼‍💻 역할 분담
 |지동진|김진욱|이유노|박지윤|
 |------|--------------|---------------|---------------|
-|PM/AI Enginner(Rettriever, Pre-trained, PEFT)|Data Scientist|AI Engineer(API, Prompt)|AI Engineer(HuggingFace, PEFT)|
-|프로젝트 총괄. 팀 회의 진행. 팀 혐업 환경 관리. RAG 개발. 대시보드 개발, PEFT 담당|학습 데이터 구성. 데이터 전처리 파이프라인 작성. 개발간 필요한 인사이트 도출 및 정보 수집, 제공|API 모델 개발. 프롬프트 작성. 모델 개선|HuggingFace 모델 학습, 모델 개선|
+|PM/AI RAG Lead|Data Scientist|AI Engineer(API, Prompt)|AI Engineer(HuggingFace, Prompt)|
+|프로젝트 전체 기획 및 일정 관리. Retrieval System 설계 및 구현 (Retriever, Query Router). 로컬 임베딩 모델 개발 및 최적화. 동적 프롬프트 엔지니어링 및 적용. Streamlit 기반 대시보드 개발. 배포 환경 구축 및 시스템 통합|데이터 파이프라인 관리. 문서 청킹 전략 계획 수립. 모델 Baseline 제공. 모델 양자화|- OpenAI 모델 개발. Prompt Engineering 담당|- 로컬 임베딩 모델 개발. Prompt Engineering 담당|
 ---
 # 5. 프로젝트 타임라인
 <img width="1580" height="807" alt="image" src="https://github.com/user-attachments/assets/57f6346a-663f-4ddd-a4b6-fafc2074ff71" />
