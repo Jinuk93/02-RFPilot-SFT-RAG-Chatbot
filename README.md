@@ -147,6 +147,7 @@ CODEIT-AI-1TEAM-LLM-PROJECT/
 │   ├── embedding/           # 임베딩, 벡터DB 생성
 │   ├── retriever/           # 문서 검색기
 │   ├── generator/           # 응답 생성기
+│   ├── visualization/       # UI 구성
 │   └── utils/               # 공통 함수 모듈
 └── README.md
 ```
@@ -160,6 +161,7 @@ CODEIT-AI-1TEAM-LLM-PROJECT/
 - `src/embedding`: 텍스트 임베딩 벡터를 생성하고 Chroma DB를 구축합니다.
 - `src/retriever`: 사용자 질문에 대한 관련 문서를 벡터DB에서 검색합니다.
 - `src/generator`: 검색된 문서 기반으로 LLM이 응답을 생성합니다.
+- `src/visualization`: Streamlit 기반 사용자 인터페이스를 구성합니다.
 - `src/notebooks`: 로컬 모델을 Fine-Tuning하여 양자화 파일을 생성합니다.
 - `src/utils`: 설정 확인, 경로 설정 등 공통 유틸리티 함수들을 포함합니다.
 
