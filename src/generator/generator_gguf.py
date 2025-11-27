@@ -78,18 +78,25 @@ class GGUFGenerator:
             return
         
         try:
+            # Config에서 USE_MODEL_HUB 확인 (없으면 True 기본값)
+            use_model_hub = getattr(self.config, 'USE_MODEL_HUB', True)
+            
             # Model Hub 사용 여부에 따라 경로 결정
-            if self.config.USE_MODEL_HUB:
+            if use_model_hub:
                 # === Model Hub에서 다운로드 ===
-                logger.info(f"📥 Model Hub에서 다운로드: {self.config.MODEL_HUB_REPO}")
+                model_hub_repo = getattr(self.config, 'MODEL_HUB_REPO', 'beomi/Llama-3-Open-Ko-8B-gguf')
+                model_hub_filename = getattr(self.config, 'MODEL_HUB_FILENAME', 'ggml-model-Q4_K_M.gguf')
+                model_cache_dir = getattr(self.config, 'MODEL_CACHE_DIR', '.cache/models')
+                
+                logger.info(f"📥 Model Hub에서 다운로드: {model_hub_repo}")
                 
                 from huggingface_hub import hf_hub_download
                 
                 model_path = hf_hub_download(
-                    repo_id=self.config.MODEL_HUB_REPO,
-                    filename=self.config.MODEL_HUB_FILENAME,
-                    cache_dir=self.config.MODEL_CACHE_DIR,
-                    local_dir=self.config.MODEL_CACHE_DIR,
+                    repo_id=model_hub_repo,
+                    filename=model_hub_filename,
+                    cache_dir=model_cache_dir,
+                    local_dir=model_cache_dir,
                     local_dir_use_symlinks=False  # 심볼릭 링크 대신 실제 복사
                 )
                 
@@ -97,7 +104,7 @@ class GGUFGenerator:
                 
             else:
                 # === 로컬 파일 사용 ===
-                model_path = self.config.GGUF_MODEL_PATH
+                model_path = self.model_path  # 생성자에서 받은 경로 사용
                 
                 if not os.path.exists(model_path):
                     raise FileNotFoundError(
@@ -305,33 +312,42 @@ class GGUFRAGPipeline:
             alpha: 임베딩 가중치
         """
         self.config = config or RAGConfig()
-        self.top_k = top_k or self.config.DEFAULT_TOP_K
+        
+        # Config에서 기본값 가져오기 (없으면 fallback)
+        self.top_k = top_k or getattr(self.config, 'DEFAULT_TOP_K', 10)
         
         # 검색 설정
-        self.search_mode = search_mode or self.config.DEFAULT_SEARCH_MODE
-        self.alpha = alpha if alpha is not None else self.config.DEFAULT_ALPHA
+        self.search_mode = search_mode or getattr(self.config, 'DEFAULT_SEARCH_MODE', 'hybrid_rerank')
+        self.alpha = alpha if alpha is not None else getattr(self.config, 'DEFAULT_ALPHA', 0.5)
         
         # Retriever 초기화 (RAGRetriever 사용)
         logger.info("RAGRetriever 초기화 중...")
         from src.retriever.retriever import RAGRetriever
         self.retriever = RAGRetriever(config=self.config)
         
-        # GGUF 설정 (파라미터가 주어지면 config 오버라이드)
-        gguf_n_gpu_layers = n_gpu_layers if n_gpu_layers is not None else self.config.GGUF_N_GPU_LAYERS
-        gguf_n_ctx = n_ctx if n_ctx is not None else self.config.GGUF_N_CTX
-        gguf_n_threads = n_threads if n_threads is not None else self.config.GGUF_N_THREADS
-        gguf_max_new_tokens = max_new_tokens if max_new_tokens is not None else self.config.GGUF_MAX_NEW_TOKENS
-        gguf_temperature = temperature if temperature is not None else self.config.GGUF_TEMPERATURE
-        gguf_top_p = top_p if top_p is not None else self.config.GGUF_TOP_P
+        # GGUF 설정 (파라미터가 주어지면 config 오버라이드, 없으면 기본값)
+        gguf_n_gpu_layers = n_gpu_layers if n_gpu_layers is not None else getattr(self.config, 'GGUF_N_GPU_LAYERS', 35)
+        gguf_n_ctx = n_ctx if n_ctx is not None else getattr(self.config, 'GGUF_N_CTX', 2048)
+        gguf_n_threads = n_threads if n_threads is not None else getattr(self.config, 'GGUF_N_THREADS', 4)
+        gguf_max_new_tokens = max_new_tokens if max_new_tokens is not None else getattr(self.config, 'GGUF_MAX_NEW_TOKENS', 512)
+        gguf_temperature = temperature if temperature is not None else getattr(self.config, 'GGUF_TEMPERATURE', 0.7)
+        gguf_top_p = top_p if top_p is not None else getattr(self.config, 'GGUF_TOP_P', 0.9)
+        
+        # 모델 경로 (fallback)
+        gguf_model_path = getattr(self.config, 'GGUF_MODEL_PATH', '.cache/models/llama-3-ko-8b.gguf')
+        
+        # 시스템 프롬프트 (fallback)
+        system_prompt = getattr(self.config, 'SYSTEM_PROMPT', '당신은 한국 공공기관 사업제안서 분석 전문가입니다.')
         
         # GGUFGenerator 초기화
         logger.info("GGUFGenerator 초기화 중...")
         logger.info(f"   GPU 레이어: {gguf_n_gpu_layers}")
         logger.info(f"   컨텍스트: {gguf_n_ctx}")
         logger.info(f"   스레드: {gguf_n_threads}")
+        logger.info(f"   모델 경로: {gguf_model_path}")
         
         self.generator = GGUFGenerator(
-            model_path=self.config.GGUF_MODEL_PATH,
+            model_path=gguf_model_path,
             n_gpu_layers=gguf_n_gpu_layers,
             n_ctx=gguf_n_ctx,
             n_threads=gguf_n_threads,
@@ -339,7 +355,7 @@ class GGUFRAGPipeline:
             max_new_tokens=gguf_max_new_tokens,
             temperature=gguf_temperature,
             top_p=gguf_top_p,
-            system_prompt=self.config.SYSTEM_PROMPT
+            system_prompt=system_prompt
         )
         
         # 모델 로드 (시간 소요)
@@ -553,35 +569,3 @@ class GGUFRAGPipeline:
             f"🔧 검색 설정 변경: mode={self.search_mode}, "
             f"top_k={self.top_k}, alpha={self.alpha}"
         )
-
-
-# 테스트용
-if __name__ == "__main__":
-    from src.utils.config import RAGConfig
-    
-    config = RAGConfig()
-    
-    # GGUFRAGPipeline 초기화
-    pipeline = GGUFRAGPipeline(config=config)
-    
-    # 테스트 질문들
-    test_questions = [
-        "안녕하세요",
-        "본 사업의 예산 범위는 어떻게 되나요?",
-        "고마워요!"
-    ]
-    
-    for question in test_questions:
-        print("\n" + "="*50)
-        print("테스트 질문:", question)
-        print("="*50)
-        
-        result = pipeline.generate_answer(question)
-        
-        print(f"\n라우팅: {result['routing_info']['route']}")
-        print(f"검색 사용: {result['used_retrieval']}")
-        print("\n응답:")
-        print(result['answer'])
-        print(f"\n소요 시간: {result['elapsed_time']:.2f}초")
-        print(f"참고 문서: {len(result['sources'])}개")
-        print("="*50)
