@@ -1,4 +1,4 @@
-from llama_cpp import Llama  # ← 주석 해제!
+from llama_cpp import Llama
 from typing import Optional, Dict, Any, List
 import logging
 import time
@@ -275,57 +275,70 @@ class GGUFRAGPipeline:
     
     def __init__(
         self,
-        config: RAGConfig = None,
+        config=None,
         model: str = None,  # 호환성용 (사용 안 함)
-        top_k: int = 10,
-        n_gpu_layers: int = 0,  # GPU 레이어 수
-        n_ctx: int = 2048,
-        n_threads: int = 8,
-        max_new_tokens: int = 256,
-        temperature: float = 0.7,
-        top_p: float = 0.9,
-        search_mode: str = "hybrid_rerank",
-        alpha: float = 0.5
+        top_k: int = None,
+        # GPU 설정 (선택적, config 오버라이드)
+        n_gpu_layers: int = None,
+        n_ctx: int = None,
+        n_threads: int = None,
+        max_new_tokens: int = None,
+        temperature: float = None,
+        top_p: float = None,
+        search_mode: str = None,
+        alpha: float = None
     ):
         """
         초기화
         
         Args:
-            config: RAGConfig 인스턴스
-            n_gpu_layers: GPU 레이어 수
-            n_ctx: 컨텍스트 길이
-            n_threads: CPU 스레드 수
-            max_new_tokens: 최대 생성 토큰
-            temperature: 생성 다양성
-            top_p: Nucleus sampling
+            config: RAGConfig 객체
+            model: 모델 이름 (사용 안 함, 호환성용)
+            top_k: 기본 검색 문서 수
+            n_gpu_layers: GPU 레이어 수 (config 오버라이드)
+            n_ctx: 컨텍스트 길이 (config 오버라이드)
+            n_threads: CPU 스레드 수 (config 오버라이드)
+            max_new_tokens: 최대 생성 토큰 (config 오버라이드)
+            temperature: 생성 다양성 (config 오버라이드)
+            top_p: Nucleus sampling (config 오버라이드)
             search_mode: 검색 모드
-            top_k: 검색할 문서 수
             alpha: 임베딩 가중치
         """
         self.config = config or RAGConfig()
-        self.search_mode = search_mode
-        self.top_k = top_k
-        self.alpha = alpha
+        self.top_k = top_k or self.config.DEFAULT_TOP_K
         
-        # Retriever 초기화
-        from src.retriever.hybrid_retriever import HybridRetriever
-        self.retriever = HybridRetriever(
-            collection_name=self.config.COLLECTION_NAME,
-            persist_directory=self.config.CHROMA_DB_DIR,
-            embedding_model_name=self.config.EMBEDDING_MODEL,
-            reranker_model_name=self.config.RERANKER_MODEL
-        )
+        # 검색 설정
+        self.search_mode = search_mode or self.config.DEFAULT_SEARCH_MODE
+        self.alpha = alpha if alpha is not None else self.config.DEFAULT_ALPHA
         
-        # Generator 초기화
+        # Retriever 초기화 (RAGRetriever 사용)
+        logger.info("RAGRetriever 초기화 중...")
+        from src.retriever.retriever import RAGRetriever
+        self.retriever = RAGRetriever(config=self.config)
+        
+        # GGUF 설정 (파라미터가 주어지면 config 오버라이드)
+        gguf_n_gpu_layers = n_gpu_layers if n_gpu_layers is not None else self.config.GGUF_N_GPU_LAYERS
+        gguf_n_ctx = n_ctx if n_ctx is not None else self.config.GGUF_N_CTX
+        gguf_n_threads = n_threads if n_threads is not None else self.config.GGUF_N_THREADS
+        gguf_max_new_tokens = max_new_tokens if max_new_tokens is not None else self.config.GGUF_MAX_NEW_TOKENS
+        gguf_temperature = temperature if temperature is not None else self.config.GGUF_TEMPERATURE
+        gguf_top_p = top_p if top_p is not None else self.config.GGUF_TOP_P
+        
+        # GGUFGenerator 초기화
+        logger.info("GGUFGenerator 초기화 중...")
+        logger.info(f"   GPU 레이어: {gguf_n_gpu_layers}")
+        logger.info(f"   컨텍스트: {gguf_n_ctx}")
+        logger.info(f"   스레드: {gguf_n_threads}")
+        
         self.generator = GGUFGenerator(
             model_path=self.config.GGUF_MODEL_PATH,
-            n_gpu_layers=n_gpu_layers,
-            n_ctx=n_ctx,
-            n_threads=n_threads,
+            n_gpu_layers=gguf_n_gpu_layers,
+            n_ctx=gguf_n_ctx,
+            n_threads=gguf_n_threads,
             config=self.config,
-            max_new_tokens=max_new_tokens,
-            temperature=temperature,
-            top_p=top_p,
+            max_new_tokens=gguf_max_new_tokens,
+            temperature=gguf_temperature,
+            top_p=gguf_top_p,
             system_prompt=self.config.SYSTEM_PROMPT
         )
         
@@ -345,7 +358,7 @@ class GGUFRAGPipeline:
     
     def _retrieve_and_format(self, query: str) -> str:
         """검색 수행 및 컨텍스트 포맷팅"""
-        # 검색 모드에 따라 문서 검색
+        # 검색 모드에 따라 문서 검색 (RAGRetriever 메서드 사용)
         if self.search_mode == "embedding":
             docs = self.retriever.search(query, top_k=self.top_k)
         elif self.search_mode == "embedding_rerank":
