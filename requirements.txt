@@ -28,6 +28,9 @@ transformers>=4.44.0
 sentence-transformers>=3.0.0
 rapidfuzz>=3.9.0
 
+# ===== GGUF 로컬 모델 (추가!) =====
+llama-cpp-python>=0.2.90
+
 # ===== Hugging Face Hub =====
 huggingface-hub>=0.25.0
 

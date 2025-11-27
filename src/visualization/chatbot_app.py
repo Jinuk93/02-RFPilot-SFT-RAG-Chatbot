@@ -2,7 +2,7 @@
 공공기관 사업제안서 RAG 챗봇
 
 기능:
-- 모델 선택 (API/로컬)
+- 모델 선택 (API/로컬 GGUF)
 - Query Router (검색 vs 직접 답변)
 - RAG 기반 질의응답 (Hybrid Search + Re-ranker)
 - 조건부 참고 문서 표시
@@ -111,6 +111,14 @@ st.markdown("""
         margin-top: 0.5rem;
         border-left: 3px solid #ff9800;
     }
+    .model-info {
+        background-color: #f3e5f5;
+        padding: 0.8rem 1rem;
+        border-radius: 0.3rem;
+        font-size: 0.9rem;
+        margin: 0.5rem 0;
+        border-left: 3px solid #9c27b0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -132,15 +140,47 @@ if 'show_routing_info' not in st.session_state:
 # ===== RAG 파이프라인 초기화 =====
 @st.cache_resource
 def initialize_rag(model_type):
-    """RAG 파이프라인 초기화 (API 모델 전용)"""
+    """
+    RAG 파이프라인 초기화
+    
+    Args:
+        model_type: "API 모델 (GPT)" 또는 "로컬 모델 (GGUF)"
+    
+    Returns:
+        (rag_pipeline, error_message, model_name)
+    """
     try:
         config = RAGConfig()
-        from src.generator.generator import RAGPipeline
-        rag = RAGPipeline(config=config)
-        return rag, None, "API"
+        
+        if model_type == "API 모델 (GPT)":
+            # API 모델 사용
+            from src.generator.generator import RAGPipeline
+            rag = RAGPipeline(config=config)
+            return rag, None, "OpenAI GPT"
+            
+        elif model_type == "로컬 모델 (GGUF)":
+            # GGUF 모델 사용
+            from src.generator.generator_gguf import GGUFRAGPipeline
+            
+            # T4 GPU 최적 설정
+            rag = GGUFRAGPipeline(
+                config=config,
+                n_gpu_layers=35,  # T4에서 전체 레이어 GPU 사용
+                n_ctx=2048,       # 컨텍스트 길이
+                n_threads=4,      # CPU 스레드 (GPU 사용 시 낮게)
+                max_new_tokens=512,  # 최대 생성 토큰
+                temperature=0.7,
+                top_p=0.9
+            )
+            return rag, None, "Llama-3-Ko-8B (GGUF)"
+        
+        else:
+            return None, f"알 수 없는 모델 타입: {model_type}", None
             
     except Exception as e:
-        return None, str(e), None
+        import traceback
+        error_detail = traceback.format_exc()
+        return None, f"{str(e)}\n\n{error_detail}", None
 
 
 # ===== 답변 생성 =====
@@ -156,12 +196,14 @@ def generate_answer(query: str, top_k: int = 10, search_mode: str = "hybrid_rera
         return result
         
     except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
         return {
-            'answer': f"❌ 오류가 발생했습니다: {str(e)}",
+            'answer': f"❌ 오류가 발생했습니다: {str(e)}\n\n{error_detail}",
             'sources': [],
-            'used_retrieval': False,  # ← 추가
+            'used_retrieval': False,
             'search_mode': search_mode,
-            'routing_info': None,  # ← 추가
+            'routing_info': None,
             'usage': {'total_tokens': 0, 'prompt_tokens': 0, 'completion_tokens': 0}
         }
 
@@ -173,8 +215,8 @@ def display_message(
     sources: list = None, 
     usage: dict = None, 
     search_mode: str = None,
-    used_retrieval: bool = None,  # ← 신규
-    routing_info: dict = None  # ← 신규
+    used_retrieval: bool = None,
+    routing_info: dict = None
 ):
     """
     메시지를 화면에 표시
@@ -231,7 +273,7 @@ def display_message(
                 'hybrid': '🔀 Hybrid Search',
                 'embedding_rerank': '📊 임베딩 + Re-ranker',
                 'embedding': '📊 임베딩 검색',
-                'direct': '💬 Direct (검색 없음)'  # ← 추가
+                'direct': '💬 Direct (검색 없음)'
             }
             st.markdown(f"""
             <div class="search-mode-info">
@@ -299,14 +341,33 @@ def main():
         model_type = st.selectbox(
             "생성 모델 선택",
             options=[
-                "API 모델 (GPT)"
+                "API 모델 (GPT)",
+                "로컬 모델 (GGUF)"
             ],
             index=0,
-            help="OpenAI API 사용 (빠르고 안정적)"
+            help="OpenAI API 또는 로컬 GGUF 모델 선택"
         )
         
-        # 모델 정보 표시
-        st.info("🌐 OpenAI GPT 모델 사용 중")
+        # 모델별 정보 표시
+        if model_type == "API 모델 (GPT)":
+            st.markdown("""
+            <div class="model-info">
+                🌐 <b>OpenAI GPT 모델</b><br>
+                • 빠르고 안정적<br>
+                • API 키 필요<br>
+                • 비용 발생 (토큰당)
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div class="model-info">
+                🖥️ <b>Llama-3-Ko-8B (GGUF)</b><br>
+                • T4 GPU 가속<br>
+                • 로컬 실행 (무료)<br>
+                • 초기 로딩 시간 소요<br>
+                • 35개 레이어 GPU 사용
+            </div>
+            """, unsafe_allow_html=True)
         
         st.markdown("---")
         
@@ -344,7 +405,7 @@ def main():
             "검색할 문서 개수 (Top-K)",
             min_value=1,
             max_value=20,
-            value=10,  # 기본값
+            value=10,
             help="검색할 문서 개수"
         )
         
@@ -380,7 +441,7 @@ def main():
             st.rerun()
         
         if st.button("💾 대화 다운로드", use_container_width=True):
-            if len(st.session_state.conv_manager) > 0:  # ✅ conv_manager 사용
+            if len(st.session_state.conv_manager) > 0:
                 json_str = st.session_state.conv_manager.export_to_json()
                 
                 st.download_button(
@@ -416,20 +477,38 @@ def main():
     if (st.session_state.rag_pipeline is None or 
         st.session_state.model_type != model_type):
         
-        with st.spinner(f"🔄 {model_type} 초기화 중..."):
+        with st.spinner(f"🔄 {model_type} 초기화 중... (GGUF 모델은 1~2분 소요될 수 있습니다)"):
             rag, error, rag_type = initialize_rag(model_type)
             
             if error:
-                st.error(f"❌ RAG 파이프라인 초기화 실패: {error}")
+                st.error(f"❌ RAG 파이프라인 초기화 실패")
+                
+                with st.expander("🔍 에러 상세 정보"):
+                    st.code(error)
+                
                 st.info("""
                 ### 💡 해결 방법
                 
+                **GGUF 모델 실패 시:**
+                1. llama-cpp-python 설치 확인:
+```bash
+pip install llama-cpp-python
+```
+                
+                2. GGUF 모델 파일 확인:
+                   - config.yaml의 GGUF_MODEL_PATH 또는
+                   - MODEL_HUB_REPO 설정 확인
+                
+                3. GPU 메모리 부족 시:
+                   - n_gpu_layers 값 감소 (35 → 20)
+                
+                **API 모델 실패 시:**
                 1. ChromaDB가 생성되었는지 확인:
 ```bash
 python main.py --step embed
 ```
                 
-                2. OpenAI API 키가 설정되었는지 확인:
+                2. OpenAI API 키 확인:
 ```bash
 # .env 파일
 OPENAI_API_KEY=your-key-here
@@ -449,7 +528,7 @@ pip install rank-bm25 sentence-transformers
     # ===== 대화 히스토리 표시 =====
     st.markdown("---")
     
-    if len(st.session_state.conv_manager) == 0:  # ✅ conv_manager 사용
+    if len(st.session_state.conv_manager) == 0:
         st.info("""
         ### 👋 환영합니다!
         
@@ -470,8 +549,8 @@ pip install rank-bm25 sentence-transformers
             sources=msg.get('sources'),
             usage=msg.get('usage'),
             search_mode=msg.get('search_mode'),
-            used_retrieval=msg.get('used_retrieval'),  # ← 신규
-            routing_info=msg.get('routing_info')  # ← 신규
+            used_retrieval=msg.get('used_retrieval'),
+            routing_info=msg.get('routing_info')
         )
     
     # ===== 질문 입력 =====
