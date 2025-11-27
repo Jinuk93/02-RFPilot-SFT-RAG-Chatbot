@@ -14,9 +14,12 @@ WORKDIR /app
 ENV HOME=/app
 ENV STREAMLIT_SERVER_FILE_WATCHER_TYPE=none
 ENV STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
-ENV TRANSFORMERS_CACHE=/app/.cache/huggingface
 ENV HF_HOME=/app/.cache/huggingface
-ENV OMP_NUM_THREADS=4
+ENV HF_HUB_CACHE=/app/.cache/huggingface/hub
+ENV HUGGINGFACE_HUB_CACHE=/app/.cache/huggingface/hub
+ENV OMP_NUM_THREADS=1
+ENV MKL_NUM_THREADS=1
+ENV NUMEXPR_NUM_THREADS=1
 
 # 캐시 디렉토리 생성 및 권한 설정
 RUN mkdir -p /app/.cache/huggingface /app/.streamlit && \
