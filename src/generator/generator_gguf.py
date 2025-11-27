@@ -216,7 +216,13 @@ class GGUFGenerator:
                 temperature=temperature,
                 top_p=top_p,
                 echo=False,  # 프롬프트 반복 안 함
-                stop=["###", "\n\n###", "### 사용자", "\n사용자:", "</s>"],  # 한국어 구분자
+                stop=[
+                    "###", "\n\n###", 
+                    "### 사용자", "\n사용자:", 
+                    "</s>",
+                    "한국어 답변", "한국어로 답변", "지침:",  # 메타 텍스트 차단
+                    "문장", "(문장"  # 메타 번호 차단
+                ],
             )
             
             elapsed = time.time() - start_time
