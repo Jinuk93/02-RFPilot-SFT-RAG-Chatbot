@@ -143,38 +143,29 @@ class GGUFGenerator:
         system_prompt: Optional[str] = None
     ) -> str:
         """
-        Llama-3 Chat 템플릿으로 프롬프트 포맷팅
+        GGUF 모델용 간단한 프롬프트 포맷팅
         
-        Args:
-            question: 사용자 질문
-            context: 선택적 컨텍스트 (RAG 검색 결과)
-            system_prompt: 선택적 시스템 프롬프트
-        
-        Returns:
-            포맷된 프롬프트 문자열
+        Llama-3 특수 토큰 대신 순수 텍스트 기반 템플릿 사용
         """
         # 시스템 프롬프트 설정
         if system_prompt is None:
             system_prompt = self.system_prompt
-            logger.warning("⚠️ system_prompt가 None! 기본 프롬프트 사용")
-        else:
-            # 동적 프롬프트 미리보기 (처음 150자만)
-            logger.info(f"✅ 동적 프롬프트 적용:\n{system_prompt[:150]}...")
-            
+        
         # 컨텍스트 포함 여부
         if context is not None:
             user_message = f"참고 문서:\n{context}\n\n질문: {question}"
         else:
             user_message = question
         
-        # Llama-3 Chat 템플릿 적용
-        formatted_prompt = (
-            f"<|start_header_id|>system<|end_header_id|>\n\n"
-            f"{system_prompt}<|eot_id|>"
-            f"<|start_header_id|>user<|end_header_id|>\n\n"
-            f"{user_message}<|eot_id|>"
-            f"<|start_header_id|>assistant<|end_header_id|>\n\n"
-        )
+        # 간단한 한국어 템플릿 (특수 토큰 없음)
+        formatted_prompt = f"""### 시스템
+{system_prompt}
+
+### 사용자
+{user_message}
+
+### 답변
+"""
         
         return formatted_prompt
     
@@ -225,7 +216,7 @@ class GGUFGenerator:
                 temperature=temperature,
                 top_p=top_p,
                 echo=False,  # 프롬프트 반복 안 함
-                stop=["<|eot_id|>", "<|end_of_text|>"],  # 종료 토큰
+                stop=["###", "\n\n###", "### 사용자", "\n사용자:", "</s>"],  # 한국어 구분자
             )
             
             elapsed = time.time() - start_time
@@ -397,13 +388,29 @@ class GGUFRAGPipeline:
         return self._format_context(docs)
     
     def _format_context(self, retrieved_docs: list) -> str:
-        """검색된 문서를 컨텍스트로 변환"""
+        """
+        검색된 문서를 컨텍스트로 변환
+        
+        컨텍스트가 너무 길면 자동으로 줄임 (토큰 제한 대응)
+        """
         if not retrieved_docs:
             return "관련 문서를 찾을 수 없습니다."
         
         context_parts = []
+        max_context_chars = 8000  # 대략 2000 토큰 정도 (여유 있게)
+        
+        current_length = 0
         for i, doc in enumerate(retrieved_docs, 1):
-            context_parts.append(f"[문서 {i}]\n{doc['content']}\n")
+            doc_text = f"[문서 {i}]\n{doc['content']}\n"
+            doc_length = len(doc_text)
+            
+            # 컨텍스트 길이 체크
+            if current_length + doc_length > max_context_chars:
+                logger.warning(f"⚠️ 컨텍스트 길이 제한: {i-1}개 문서만 사용 (최대 {max_context_chars}자)")
+                break
+            
+            context_parts.append(doc_text)
+            current_length += doc_length
         
         return "\n".join(context_parts)
     
@@ -493,8 +500,8 @@ class GGUFRAGPipeline:
                 used_retrieval = False
                 self._last_retrieved_docs = []
                 
-                # 동적 프롬프트 선택
-                system_prompt = PromptManager.get_prompt(query_type)
+                # 동적 프롬프트 선택 (GGUF용)
+                system_prompt = PromptManager.get_prompt(query_type, model_type="gguf")
                 logger.info(f"⏭️ RAG 스킵: {query_type}")
             
             elif query_type == 'document':
@@ -502,8 +509,8 @@ class GGUFRAGPipeline:
                 context = self._retrieve_and_format(query)
                 used_retrieval = True
                 
-                # 동적 프롬프트 (context 포함)
-                system_prompt = PromptManager.get_prompt('document')
+                # 동적 프롬프트 (GGUF용, context 포함)
+                system_prompt = PromptManager.get_prompt('document', model_type="gguf")
                 logger.info(f"🔍 RAG 수행: {len(self._last_retrieved_docs)}개 문서")
             
             # 3. 답변 생성 (system_prompt 전달)
