@@ -157,6 +157,9 @@ if 'custom_db_path' not in st.session_state:
 if 'db_uploaded' not in st.session_state:
     st.session_state.db_uploaded = False
 
+if 'last_db_file' not in st.session_state:
+    st.session_state.last_db_file = None
+
 
 # ===== API 키로 사용 가능한 모델 조회 함수 =====
 def get_available_models(api_key: str) -> tuple:
@@ -295,71 +298,60 @@ def validate_api_key(api_key: str) -> tuple:
 
 
 # ===== 벡터 DB 업로드 및 검증 함수 =====
-def extract_and_validate_vectordb(uploaded_file) -> tuple:
+def upload_and_extract_vectordb(uploaded_file):
     """
-    업로드된 ZIP 파일을 추출하고 ChromaDB 구조 검증
+    업로드된 ZIP 파일을 압축 해제하고 ChromaDB 경로 반환
     
     Args:
         uploaded_file: Streamlit UploadedFile 객체
-    
+        
     Returns:
-        (success, db_path, error_message)
+        Path: ChromaDB 경로 (chroma.sqlite3가 있는 폴더)
+        
+    Raises:
+        FileNotFoundError: chroma.sqlite3를 찾을 수 없는 경우
     """
     import zipfile
     import tempfile
-    import shutil
+    from pathlib import Path
     
-    try:
-        # 임시 디렉토리 생성
-        temp_dir = tempfile.mkdtemp(prefix="chroma_db_")
-        
-        # ZIP 파일 저장
-        zip_path = os.path.join(temp_dir, "chroma_db.zip")
-        with open(zip_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        
-        # ZIP 압축 해제
-        extract_dir = os.path.join(temp_dir, "chroma_db")
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(extract_dir)
-        
-        # ChromaDB 필수 파일 확인
-        required_files = ["chroma.sqlite3"]
-        
-        # chroma_db 폴더 내부 확인
-        db_path = extract_dir
-        
-        # chroma.sqlite3 파일 찾기
-        found_sqlite = False
-        for root, dirs, files in os.walk(extract_dir):
-            if "chroma.sqlite3" in files:
-                db_path = root
-                found_sqlite = True
-                break
-        
-        if not found_sqlite:
-            shutil.rmtree(temp_dir)
-            return False, None, "❌ chroma.sqlite3 파일을 찾을 수 없습니다. ChromaDB 폴더를 압축했는지 확인하세요."
-        
-        # 추가 검증: 파일 크기 확인
-        sqlite_path = os.path.join(db_path, "chroma.sqlite3")
-        file_size = os.path.getsize(sqlite_path)
-        
-        if file_size < 1024:  # 1KB 미만이면 비정상
-            shutil.rmtree(temp_dir)
-            return False, None, "❌ ChromaDB 파일이 비정상적으로 작습니다."
-        
-        return True, db_path, ""
-        
-    except zipfile.BadZipFile:
-        return False, None, "❌ 잘못된 ZIP 파일입니다."
-    except Exception as e:
-        return False, None, f"❌ 압축 해제 실패: {str(e)}"
+    # 임시 폴더 생성
+    temp_dir = tempfile.mkdtemp(prefix="chroma_db_")
+    temp_path = Path(temp_dir)
+    
+    # ZIP 파일 저장
+    zip_path = temp_path / "uploaded.zip"
+    with open(zip_path, "wb") as f:
+        f.write(uploaded_file.getbuffer())
+    
+    # 압축 해제
+    extract_path = temp_path / "chromadb"
+    extract_path.mkdir(exist_ok=True)
+    
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall(extract_path)
+    
+    # chroma.sqlite3 찾기
+    # 경우 1: 루트에 있는 경우
+    if (extract_path / "chroma.sqlite3").exists():
+        return str(extract_path)
+    
+    # 경우 2: 하위 폴더에 있는 경우
+    for root in extract_path.rglob("*"):
+        if root.is_dir():
+            if (root / "chroma.sqlite3").exists():
+                return str(root)
+    
+    # 찾지 못한 경우
+    raise FileNotFoundError(
+        "chroma.sqlite3를 찾을 수 없습니다. "
+        "올바른 ChromaDB 폴더를 압축했는지 확인하세요."
+    )
 
 
 def get_vectordb_info(db_path: str) -> dict:
     """
-    벡터 DB 정보 조회
+    벡터 DB 정보 조회 (chroma_parser.py의 ChromaDBParser 방식)
     
     Args:
         db_path: ChromaDB 경로
@@ -368,39 +360,60 @@ def get_vectordb_info(db_path: str) -> dict:
         정보 딕셔너리
     """
     try:
-        from langchain_chroma import Chroma
-        from langchain_openai.embeddings import OpenAIEmbeddings
+        import chromadb
+        from pathlib import Path
         
-        # 임베딩 초기화 (임시)
-        embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+        # ChromaDB 클라이언트 생성
+        client = chromadb.PersistentClient(path=str(Path(db_path)))
         
-        # 벡터스토어 로드
-        vectorstore = Chroma(
-            persist_directory=db_path,
-            embedding_function=embeddings
+        # Collection 리스트 가져오기
+        collections = client.list_collections()
+        
+        if not collections:
+            return {
+                'doc_count': 0,
+                'metadata_keys': [],
+                'collection_name': 'N/A',
+                'error': 'Collection이 없습니다'
+            }
+        
+        # 첫 번째 Collection 사용
+        collection = collections[0]
+        collection_name = collection.name
+        
+        # 총 문서 수
+        count = collection.count()
+        
+        if count == 0:
+            return {
+                'doc_count': 0,
+                'metadata_keys': [],
+                'collection_name': collection_name
+            }
+        
+        # 샘플 데이터로 정보 확인
+        sample = collection.get(
+            limit=1,
+            include=['metadatas']
         )
         
-        # 문서 수 조회
-        collection = vectorstore._collection
-        doc_count = collection.count()
-        
-        # 샘플 문서 조회
-        sample_docs = vectorstore.get(limit=1)
-        
+        # 메타데이터 키
         metadata_keys = []
-        if sample_docs and sample_docs.get('metadatas') and len(sample_docs['metadatas']) > 0:
-            metadata_keys = list(sample_docs['metadatas'][0].keys())
+        if sample.get('metadatas') and len(sample['metadatas']) > 0:
+            if sample['metadatas'][0]:
+                metadata_keys = list(sample['metadatas'][0].keys())
         
         return {
-            'doc_count': doc_count,
+            'doc_count': count,
             'metadata_keys': metadata_keys,
-            'collection_name': collection.name
+            'collection_name': collection_name
         }
         
     except Exception as e:
         return {
             'doc_count': 0,
             'metadata_keys': [],
+            'collection_name': 'N/A',
             'error': str(e)
         }
 
@@ -745,61 +758,67 @@ def main():
         )
         
         if use_custom_db:
-            st.info("""
-            💡 **ChromaDB 준비 방법:**
-            1. ChromaDB 폴더를 ZIP으로 압축 (예: `chroma_db.zip`)
-            2. ZIP 파일 내부에 `chroma.sqlite3` 파일 포함 필수
-            3. 아래에서 업로드
+            st.markdown("""
+            **업로드 방법:**
+            1. ChromaDB 폴더를 ZIP으로 압축
+            2. 아래에 업로드
+            
+            **필수 파일:**
+            - `chroma.sqlite3`
+            - Collection 폴더
             """)
             
             uploaded_db = st.file_uploader(
                 "ChromaDB ZIP 파일 업로드",
                 type=['zip'],
-                help="chroma_db 폴더를 압축한 ZIP 파일을 업로드하세요"
+                help="chroma_db 폴더를 압축한 ZIP 파일을 업로드하세요",
+                key="vectordb_uploader"
             )
             
+            # 파일 업로드 처리
             if uploaded_db is not None:
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    if st.button("🔍 검증", key="validate_db", use_container_width=True):
-                        with st.spinner("🔄 벡터 DB 검증 중..."):
-                            success, db_path, error = extract_and_validate_vectordb(uploaded_db)
+                # 새 파일이거나 처음 업로드
+                if ('last_db_file' not in st.session_state or 
+                    st.session_state.last_db_file != uploaded_db.name):
+                    
+                    with st.spinner("📦 파일 처리 중..."):
+                        try:
+                            db_path = upload_and_extract_vectordb(uploaded_db)
+                            st.session_state.custom_db_path = db_path
+                            st.session_state.last_db_file = uploaded_db.name
+                            st.session_state.db_uploaded = True
                             
-                            if success:
-                                # DB 정보 조회
-                                db_info = get_vectordb_info(db_path)
-                                
-                                if 'error' in db_info:
-                                    st.error(f"❌ DB 정보 조회 실패: {db_info['error']}")
-                                else:
-                                    st.success("✅ 벡터 DB가 유효합니다!")
-                                    st.info(f"""
-                                    📋 **DB 정보:**
-                                    - 문서 수: {db_info['doc_count']:,}개
-                                    - 컬렉션: {db_info['collection_name']}
-                                    - 메타데이터: {', '.join(db_info['metadata_keys'][:5])}
-                                    """)
-                            else:
-                                st.error(error)
-                
-                with col2:
-                    if st.button("✅ 적용", key="apply_db", use_container_width=True, type="primary"):
-                        with st.spinner("🔄 벡터 DB 적용 중..."):
-                            success, db_path, error = extract_and_validate_vectordb(uploaded_db)
+                            # RAG 파이프라인 재초기화 강제
+                            st.session_state.rag_pipeline = None
+                            st.session_state.model_type = None
                             
-                            if success:
-                                st.session_state.custom_db_path = db_path
-                                st.session_state.db_uploaded = True
-                                
-                                # RAG 파이프라인 재초기화 강제
-                                st.session_state.rag_pipeline = None
-                                st.session_state.model_type = None
-                                
-                                st.success("✅ 벡터 DB가 적용되었습니다!")
-                                st.info("💡 모델을 다시 선택하면 새 벡터 DB로 초기화됩니다.")
+                            st.success("✅ 벡터 DB 업로드 완료!")
+                            
+                            # DB 정보 표시
+                            db_info = get_vectordb_info(db_path)
+                            
+                            if 'error' not in db_info:
+                                st.info(f"""
+                                📋 **DB 정보:**
+                                - 문서 수: {db_info['doc_count']:,}개
+                                - 컬렉션: {db_info['collection_name']}
+                                - 메타데이터: {', '.join(db_info['metadata_keys'][:5])}
+                                """)
                             else:
-                                st.error(error)
+                                st.warning(f"⚠️ DB 정보 조회 실패: {db_info['error']}")
+                            
+                            st.info("💡 모델을 다시 선택하면 새 벡터 DB로 초기화됩니다.")
+                            
+                        except FileNotFoundError as e:
+                            st.error(str(e))
+                        except Exception as e:
+                            st.error(f"❌ 업로드 실패: {e}")
+                
+                else:
+                    # 이미 업로드된 파일
+                    st.success(f"✅ 업로드됨: {uploaded_db.name}")
+                    if st.session_state.custom_db_path:
+                        st.info(f"경로: {st.session_state.custom_db_path}")
             
             # 벡터 DB 생성 가이드
             with st.expander("📖 벡터 DB 생성 방법"):
@@ -829,10 +848,6 @@ def main():
                 
                 **4. 업로드**
                 - 생성된 `chroma_db.zip` 파일을 위에서 업로드
-                
-                **필수 파일:**
-                - `chroma.sqlite3` (메인 DB 파일)
-                - `{uuid}/` 폴더들 (벡터 인덱스)
                 """)
         
         else:
@@ -859,6 +874,7 @@ def main():
             if st.session_state.custom_db_path:
                 st.session_state.custom_db_path = None
                 st.session_state.db_uploaded = False
+                st.session_state.last_db_file = None
                 st.session_state.rag_pipeline = None
                 st.session_state.model_type = None
         
@@ -1230,4 +1246,3 @@ pip install rank-bm25 sentence-transformers
 
 if __name__ == "__main__":
     main()
-    
