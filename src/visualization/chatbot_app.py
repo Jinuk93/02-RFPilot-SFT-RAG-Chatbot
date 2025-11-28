@@ -2,6 +2,8 @@
 공공기관 사업제안서 RAG 챗봇
 
 기능:
+- 사용자 API 키 입력 및 검증
+- 사용 가능한 GPT 모델 자동 조회 및 선택
 - 모델 선택 (API/로컬 GGUF)
 - Query Router (검색 vs 직접 답변)
 - RAG 기반 질의응답 (Hybrid Search + Re-ranker)
@@ -12,6 +14,7 @@
 
 import streamlit as st
 import sys
+import os
 from pathlib import Path
 from datetime import datetime
 import json
@@ -136,15 +139,144 @@ if 'model_type' not in st.session_state:
 if 'show_routing_info' not in st.session_state:
     st.session_state.show_routing_info = False
 
+if 'user_api_key' not in st.session_state:
+    st.session_state.user_api_key = None
+
+if 'api_key_validated' not in st.session_state:
+    st.session_state.api_key_validated = False
+
+if 'available_models' not in st.session_state:
+    st.session_state.available_models = []
+
+if 'selected_gpt_model' not in st.session_state:
+    st.session_state.selected_gpt_model = "gpt-4o-mini"
+
+
+# ===== API 키로 사용 가능한 모델 조회 함수 =====
+def get_available_models(api_key: str) -> tuple:
+    """
+    API 키로 사용 가능한 GPT 모델 목록 조회
+    
+    Args:
+        api_key: OpenAI API 키
+    
+    Returns:
+        (success, model_list, error_message)
+    """
+    try:
+        from openai import OpenAI
+        
+        client = OpenAI(api_key=api_key)
+        
+        # 모델 목록 조회
+        models_response = client.models.list()
+        
+        # GPT 모델만 필터링
+        gpt_models = []
+        model_priority = {
+            'gpt-4o': 1,
+            'gpt-4o-mini': 2,
+            'gpt-4-turbo': 3,
+            'gpt-4': 4,
+            'gpt-3.5-turbo': 5,
+        }
+        
+        for model in models_response.data:
+            model_id = model.id
+            
+            # GPT 모델만 선택 (gpt-4, gpt-3.5 등)
+            if any(prefix in model_id for prefix in ['gpt-4', 'gpt-3.5']):
+                # 특정 날짜 버전 제외 (gpt-4-0613 같은 것)
+                if not any(char.isdigit() for char in model_id.split('-')[-1]):
+                    gpt_models.append(model_id)
+        
+        # 우선순위 정렬
+        def get_priority(model_name):
+            for key, priority in model_priority.items():
+                if key in model_name:
+                    return priority
+            return 99
+        
+        gpt_models.sort(key=get_priority)
+        
+        # 중복 제거 (최신 버전만 유지)
+        unique_models = []
+        seen_base_names = set()
+        
+        for model in gpt_models:
+            base_name = model.split('-')[0] + '-' + model.split('-')[1]
+            if base_name not in seen_base_names:
+                unique_models.append(model)
+                seen_base_names.add(base_name)
+        
+        if not unique_models:
+            return False, [], "사용 가능한 GPT 모델을 찾을 수 없습니다."
+        
+        return True, unique_models, ""
+        
+    except Exception as e:
+        error_msg = str(e)
+        
+        if "Incorrect API key" in error_msg:
+            return False, [], "❌ 잘못된 API 키입니다."
+        elif "insufficient_quota" in error_msg:
+            return False, [], "⚠️ API 크레딧이 부족합니다."
+        else:
+            return False, [], f"❌ 모델 조회 실패: {error_msg}"
+
+
+# ===== API 키 검증 함수 =====
+def validate_api_key(api_key: str) -> tuple:
+    """
+    OpenAI API 키 유효성 검증 및 사용 가능한 모델 조회
+    
+    Args:
+        api_key: 검증할 API 키
+    
+    Returns:
+        (is_valid, message, available_models)
+    """
+    try:
+        from openai import OpenAI
+        
+        client = OpenAI(api_key=api_key)
+        
+        # 1. 간단한 API 호출로 검증
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": "test"}],
+            max_tokens=5
+        )
+        
+        # 2. 사용 가능한 모델 조회
+        success, models, error = get_available_models(api_key)
+        
+        if not success:
+            return True, f"✅ API 키는 유효하지만 모델 조회 실패: {error}", []
+        
+        return True, f"✅ API 키가 유효합니다! ({len(models)}개 모델 사용 가능)", models
+        
+    except Exception as e:
+        error_msg = str(e)
+        
+        if "Incorrect API key" in error_msg or "invalid_api_key" in error_msg:
+            return False, "❌ 잘못된 API 키입니다. 다시 확인해주세요.", []
+        elif "insufficient_quota" in error_msg:
+            return False, "⚠️ API 키는 유효하지만 크레딧이 부족합니다.", []
+        else:
+            return False, f"❌ API 키 검증 실패: {error_msg}", []
+
 
 # ===== RAG 파이프라인 초기화 =====
 @st.cache_resource
-def initialize_rag(model_type):
+def initialize_rag(model_type, _user_api_key=None, gpt_model_name=None):
     """
     RAG 파이프라인 초기화
     
     Args:
         model_type: "API 모델 (GPT)" 또는 "로컬 모델 (GGUF)"
+        _user_api_key: 사용자가 입력한 API 키 (None이면 .env 사용)
+        gpt_model_name: 사용할 GPT 모델 이름 (예: "gpt-4o-mini")
     
     Returns:
         (rag_pipeline, error_message, model_name)
@@ -152,23 +284,31 @@ def initialize_rag(model_type):
     try:
         config = RAGConfig()
         
+        # 사용자 API 키가 있으면 덮어쓰기
+        if _user_api_key:
+            config.OPENAI_API_KEY = _user_api_key
+            os.environ["OPENAI_API_KEY"] = _user_api_key
+        
+        # GPT 모델 이름 설정
+        if gpt_model_name:
+            config.LLM_MODEL_NAME = gpt_model_name
+        
         if model_type == "API 모델 (GPT)":
             # API 모델 사용
             from src.generator.generator import RAGPipeline
             rag = RAGPipeline(config=config)
-            return rag, None, "OpenAI GPT"
+            return rag, None, f"OpenAI {config.LLM_MODEL_NAME}"
             
         elif model_type == "로컬 모델 (GGUF)":
             # GGUF 모델 사용
             from src.generator.generator_gguf import GGUFRAGPipeline
             
-            # T4 GPU 최적 설정
             rag = GGUFRAGPipeline(
                 config=config,
-                n_gpu_layers=35,  # T4에서 전체 레이어 GPU 사용
-                n_ctx=8192,       # 컨텍스트 길이
-                n_threads=4,      # CPU 스레드 (GPU 사용 시 낮게)
-                max_new_tokens=512,  # 최대 생성 토큰
+                n_gpu_layers=35,
+                n_ctx=8192,
+                n_threads=4,
+                max_new_tokens=512,
                 temperature=0.7,
                 top_p=0.9
             )
@@ -218,18 +358,7 @@ def display_message(
     used_retrieval: bool = None,
     routing_info: dict = None
 ):
-    """
-    메시지를 화면에 표시
-    
-    Args:
-        role: 'user' 또는 'assistant'
-        content: 메시지 내용
-        sources: 참고 문서 리스트 (assistant만)
-        usage: 토큰 사용량 (assistant만)
-        search_mode: 검색 모드 (assistant만)
-        used_retrieval: 검색 사용 여부 (assistant만)
-        routing_info: 라우팅 정보 (assistant만)
-    """
+    """메시지를 화면에 표시"""
     if role == 'user':
         st.markdown(f"""
         <div class="chat-message user-message">
@@ -255,7 +384,7 @@ def display_message(
         </div>
         """, unsafe_allow_html=True)
         
-        # ===== 라우팅 정보 (개발 모드) =====
+        # 라우팅 정보 (개발 모드)
         if st.session_state.show_routing_info and routing_info:
             route_icon = "🔍" if routing_info.get('route') == 'rag' else "💬"
             st.markdown(f"""
@@ -266,7 +395,7 @@ def display_message(
             </div>
             """, unsafe_allow_html=True)
         
-        # ===== 검색 모드 정보 (검색 사용 시만) =====
+        # 검색 모드 정보 (검색 사용 시만)
         if used_retrieval and search_mode:
             mode_display = {
                 'hybrid_rerank': '🔄 Hybrid + Re-ranker',
@@ -281,7 +410,7 @@ def display_message(
             </div>
             """, unsafe_allow_html=True)
         
-        # ===== 참고 문서 (검색 사용 시만) =====
+        # 참고 문서 (검색 사용 시만)
         if used_retrieval and sources and len(sources) > 0:
             st.markdown("### 📚 참고 문서")
             
@@ -314,7 +443,7 @@ def display_message(
             # 검색을 사용하지 않은 경우 안내
             st.info("💬 이 답변은 문서 검색 없이 생성되었습니다.")
         
-        # ===== 토큰 사용량 =====
+        # 토큰 사용량
         if usage:
             st.markdown(f"""
             <div class="token-usage">
@@ -335,30 +464,204 @@ def main():
     with st.sidebar:
         st.header("⚙️ 설정")
         
-        # 모델 설정
+        # ===== 🔑 API 키 설정 =====
+        st.markdown("### 🔑 API 키 설정")
+        
+        config = RAGConfig()
+        has_env_key = bool(config.OPENAI_API_KEY and config.OPENAI_API_KEY != "")
+        
+        if has_env_key:
+            st.success("✅ 서버 API 키 사용 중")
+        else:
+            st.warning("⚠️ 서버 API 키가 없습니다. 아래에 입력하세요.")
+        
+        use_custom_key = st.checkbox(
+            "🔓 내 API 키 사용하기",
+            value=not has_env_key,
+            help="OpenAI API 키를 직접 입력하여 사용합니다."
+        )
+        
+        if use_custom_key:
+            user_key_input = st.text_input(
+                "OpenAI API 키 입력",
+                type="password",
+                placeholder="sk-...",
+                help="https://platform.openai.com/api-keys 에서 발급받으세요"
+            )
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                validate_button = st.button(
+                    "🔍 검증",
+                    use_container_width=True,
+                    disabled=not user_key_input
+                )
+            
+            with col2:
+                apply_button = st.button(
+                    "✅ 적용",
+                    use_container_width=True,
+                    disabled=not user_key_input,
+                    type="primary"
+                )
+            
+            # 검증 버튼
+            if validate_button and user_key_input:
+                with st.spinner("🔄 API 키 검증 및 모델 조회 중..."):
+                    is_valid, message, models = validate_api_key(user_key_input)
+                    
+                    if is_valid:
+                        st.success(message)
+                        st.session_state.api_key_validated = True
+                        st.session_state.available_models = models
+                        
+                        # 사용 가능한 모델 표시
+                        if models:
+                            st.info(f"📋 사용 가능한 모델: {', '.join(models)}")
+                    else:
+                        st.error(message)
+                        st.session_state.api_key_validated = False
+                        st.session_state.available_models = []
+            
+            # 적용 버튼
+            if apply_button and user_key_input:
+                with st.spinner("🔄 API 키 적용 중..."):
+                    is_valid, message, models = validate_api_key(user_key_input)
+                    
+                    if is_valid:
+                        st.session_state.user_api_key = user_key_input
+                        st.session_state.api_key_validated = True
+                        st.session_state.available_models = models
+                        
+                        # RAG 파이프라인 재초기화 강제
+                        st.session_state.rag_pipeline = None
+                        st.session_state.model_type = None
+                        
+                        st.success("✅ API 키가 적용되었습니다!")
+                        
+                        if models:
+                            st.info(f"💡 아래에서 사용할 모델을 선택하세요. ({len(models)}개 사용 가능)")
+                    else:
+                        st.error(message)
+            
+            # API 키 입력 가이드
+            with st.expander("📖 API 키 발급 방법"):
+                st.markdown("""
+                1. [OpenAI Platform](https://platform.openai.com/api-keys) 접속
+                2. 로그인 후 "Create new secret key" 클릭
+                3. 생성된 키를 복사하여 위에 붙여넣기
+                
+                **주의사항:**
+                - API 키는 안전하게 보관하세요
+                - 무료 크레딧이 소진되면 사용 불가
+                - 사용량에 따라 요금이 부과될 수 있습니다
+                
+                **모델별 가격 (1M 토큰 기준):**
+                - gpt-4o: $2.50 (입력) / $10.00 (출력)
+                - gpt-4o-mini: $0.15 (입력) / $0.60 (출력)
+                - gpt-3.5-turbo: $0.50 (입력) / $1.50 (출력)
+                """)
+        
+        else:
+            # 서버 키 사용 중
+            if has_env_key:
+                st.info("ℹ️ 서버에 설정된 API 키를 사용합니다.")
+                
+                # 서버 키로 사용 가능한 모델 조회 (최초 1회)
+                if not st.session_state.available_models:
+                    with st.spinner("🔄 사용 가능한 모델 조회 중..."):
+                        success, models, error = get_available_models(config.OPENAI_API_KEY)
+                        if success:
+                            st.session_state.available_models = models
+            
+            # 사용자가 입력한 키 초기화
+            if st.session_state.user_api_key:
+                st.session_state.user_api_key = None
+                st.session_state.rag_pipeline = None
+                st.session_state.model_type = None
+        
+        st.markdown("---")
+        
+        # ===== 🤖 모델 설정 =====
         st.markdown("### 🤖 모델 설정")
+        
+        can_use_gpt = has_env_key or (use_custom_key and st.session_state.api_key_validated)
+        
+        model_options = ["API 모델 (GPT)", "로컬 모델 (GGUF)"]
+        
+        if not can_use_gpt:
+            st.warning("⚠️ API 키를 입력해야 GPT 모델을 사용할 수 있습니다.")
+            default_index = 1
+        else:
+            default_index = 0
         
         model_type = st.selectbox(
             "생성 모델 선택",
-            options=[
-                "API 모델 (GPT)",
-                "로컬 모델 (GGUF)"
-            ],
-            index=0,
+            options=model_options,
+            index=default_index,
             help="OpenAI API 또는 로컬 GGUF 모델 선택"
         )
         
-        # 모델별 정보 표시
-        if model_type == "API 모델 (GPT)":
-            st.markdown("""
-            <div class="model-info">
-                🌐 <b>OpenAI GPT 모델</b><br>
-                • 빠르고 안정적<br>
-                • API 키 필요<br>
-                • 비용 발생 (토큰당)
-            </div>
-            """, unsafe_allow_html=True)
-        else:
+        # ===== GPT 모델 상세 선택 =====
+        selected_gpt_model = None
+        
+        if model_type == "API 모델 (GPT)" and can_use_gpt:
+            available_models = st.session_state.available_models
+            
+            if available_models:
+                # 모델 선택 UI
+                st.markdown("#### 📋 GPT 모델 선택")
+                
+                # 모델 설명
+                model_descriptions = {
+                    'gpt-4o': '🚀 최신 모델 (가장 강력, 비쌈)',
+                    'gpt-4o-mini': '⚡ 경량 모델 (빠르고 저렴, 권장)',
+                    'gpt-4-turbo': '💎 고성능 모델 (빠른 GPT-4)',
+                    'gpt-4': '🏆 표준 GPT-4 (높은 품질)',
+                    'gpt-3.5-turbo': '💰 가성비 모델 (저렴)'
+                }
+                
+                # 기본값 설정
+                if st.session_state.selected_gpt_model not in available_models:
+                    # 우선순위: gpt-4o-mini > gpt-3.5-turbo > 첫번째 모델
+                    if 'gpt-4o-mini' in available_models:
+                        st.session_state.selected_gpt_model = 'gpt-4o-mini'
+                    elif 'gpt-3.5-turbo' in available_models:
+                        st.session_state.selected_gpt_model = 'gpt-3.5-turbo'
+                    else:
+                        st.session_state.selected_gpt_model = available_models[0]
+                
+                # 모델 선택
+                selected_gpt_model = st.selectbox(
+                    "사용할 모델",
+                    options=available_models,
+                    index=available_models.index(st.session_state.selected_gpt_model),
+                    format_func=lambda x: f"{model_descriptions.get(x, x)} - {x}",
+                    help="API 키로 사용 가능한 모델 중 선택하세요"
+                )
+                
+                # 선택 저장
+                st.session_state.selected_gpt_model = selected_gpt_model
+                
+                # 선택한 모델 정보 표시
+                st.markdown(f"""
+                <div class="model-info">
+                    🎯 <b>선택된 모델</b><br>
+                    • {selected_gpt_model}<br>
+                    • {model_descriptions.get(selected_gpt_model, '설명 없음')}
+                </div>
+                """, unsafe_allow_html=True)
+                
+            else:
+                st.warning("⚠️ 사용 가능한 모델을 조회하지 못했습니다.")
+                st.info("💡 '검증' 버튼을 눌러 모델 목록을 조회하세요.")
+                
+                # 기본값 사용
+                selected_gpt_model = "gpt-4o-mini"
+        
+        elif model_type == "로컬 모델 (GGUF)":
+            # GGUF 모델 정보 표시
             st.markdown("""
             <div class="model-info">
                 🖥️ <b>Llama-3-Ko-8B (GGUF)</b><br>
@@ -371,7 +674,7 @@ def main():
         
         st.markdown("---")
         
-        # 검색 설정
+        # ===== 🔍 검색 설정 =====
         st.markdown("### 🔍 검색 설정")
         
         search_mode = st.selectbox(
@@ -421,7 +724,7 @@ def main():
         
         st.markdown("---")
         
-        # 개발자 옵션
+        # ===== 🛠️ 개발자 옵션 =====
         st.markdown("### 🛠️ 개발자 옵션")
         
         show_routing = st.toggle(
@@ -433,7 +736,7 @@ def main():
         
         st.markdown("---")
         
-        # 대화 관리
+        # ===== 💬 대화 관리 =====
         st.markdown("### 💬 대화 관리")
         
         if st.button("🗑️ 대화 초기화", use_container_width=True):
@@ -454,7 +757,7 @@ def main():
         
         st.markdown("---")
         
-        # 통계
+        # ===== 📊 통계 =====
         st.markdown("### 📊 통계")
         stats = st.session_state.conv_manager.get_statistics()
 
@@ -464,6 +767,8 @@ def main():
         st.markdown("---")
         st.markdown("### 📋 현재 설정")
         st.text(f"모델: {model_type}")
+        if model_type == "API 모델 (GPT)" and selected_gpt_model:
+            st.text(f"GPT 모델: {selected_gpt_model}")
         st.text(f"검색 모드: {search_mode}")
         st.text(f"Re-ranker: {'✅ ON' if use_reranker else '❌ OFF'}")
         st.text(f"실제 모드: {actual_search_mode}")
@@ -473,12 +778,23 @@ def main():
         st.text(f"Router Info: {'✅ ON' if show_routing else '❌ OFF'}")
     
     # ===== RAG 파이프라인 초기화 =====
-    # 모델 타입이 변경되었거나 파이프라인이 없으면 재초기화
-    if (st.session_state.rag_pipeline is None or 
-        st.session_state.model_type != model_type):
-        
+    # 모델 타입이 변경되었거나 GPT 모델이 변경되었거나 파이프라인이 없으면 재초기화
+    need_reinit = (
+        st.session_state.rag_pipeline is None or 
+        st.session_state.model_type != model_type or
+        (model_type == "API 모델 (GPT)" and 
+         selected_gpt_model and 
+         hasattr(st.session_state.rag_pipeline, 'model') and
+         st.session_state.rag_pipeline.model != selected_gpt_model)
+    )
+    
+    if need_reinit:
         with st.spinner(f"🔄 {model_type} 초기화 중... (GGUF 모델은 1~2분 소요될 수 있습니다)"):
-            rag, error, rag_type = initialize_rag(model_type)
+            rag, error, rag_type = initialize_rag(
+                model_type, 
+                _user_api_key=st.session_state.user_api_key,
+                gpt_model_name=selected_gpt_model
+            )
             
             if error:
                 st.error(f"❌ RAG 파이프라인 초기화 실패")
@@ -523,7 +839,12 @@ pip install rank-bm25 sentence-transformers
             
             st.session_state.rag_pipeline = rag
             st.session_state.model_type = model_type
-            st.success(f"✅ {rag_type} 모델 준비 완료!")
+            
+            # API 키 및 모델 사용 정보 표시
+            if st.session_state.user_api_key:
+                st.success(f"✅ {rag_type} 준비 완료! (사용자 API 키)")
+            else:
+                st.success(f"✅ {rag_type} 준비 완료!")
     
     # ===== 대화 히스토리 표시 =====
     st.markdown("---")
