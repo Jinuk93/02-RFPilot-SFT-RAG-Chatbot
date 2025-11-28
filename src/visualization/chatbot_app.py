@@ -161,7 +161,7 @@ if 'db_uploaded' not in st.session_state:
 # ===== API 키로 사용 가능한 모델 조회 함수 =====
 def get_available_models(api_key: str) -> tuple:
     """
-    API 키로 사용 가능한 GPT 모델 목록 조회
+    API 키로 실제 사용 가능한 모든 GPT/o 시리즈 모델 조회
     
     Args:
         api_key: OpenAI API 키
@@ -177,46 +177,63 @@ def get_available_models(api_key: str) -> tuple:
         # 모델 목록 조회
         models_response = client.models.list()
         
-        # GPT 모델만 필터링
-        gpt_models = []
-        model_priority = {
-            'gpt-4o': 1,
-            'gpt-4o-mini': 2,
-            'gpt-4-turbo': 3,
-            'gpt-4': 4,
-            'gpt-3.5-turbo': 5,
-        }
+        # Chat Completion 가능한 모델만 필터링
+        available_models = []
         
         for model in models_response.data:
             model_id = model.id
             
-            # GPT 모델만 선택 (gpt-4, gpt-3.5 등)
-            if any(prefix in model_id for prefix in ['gpt-4', 'gpt-3.5']):
-                # 특정 날짜 버전 제외 (gpt-4-0613 같은 것)
-                if not any(char.isdigit() for char in model_id.split('-')[-1]):
-                    gpt_models.append(model_id)
+            # GPT 시리즈, o1, o3 시리즈만 선택
+            if (model_id.startswith('gpt-') or 
+                model_id.startswith('o1-') or 
+                model_id.startswith('o3-')):
+                available_models.append(model_id)
         
-        # 우선순위 정렬
+        if not available_models:
+            return False, [], "사용 가능한 모델을 찾을 수 없습니다."
+        
+        # 우선순위 정렬 (최신/고급 모델 우선)
+        priority_map = {
+            'o3': 1,
+            'o1': 2,
+            'gpt-5': 3,
+            'gpt-4o': 4,
+            'gpt-4o-mini': 5,
+            'gpt-4-turbo': 6,
+            'gpt-4': 7,
+            'gpt-3.5-turbo': 8,
+            'gpt-3.5': 9
+        }
+        
         def get_priority(model_name):
-            for key, priority in model_priority.items():
-                if key in model_name:
+            for prefix, priority in priority_map.items():
+                if model_name.startswith(prefix):
                     return priority
             return 99
         
-        gpt_models.sort(key=get_priority)
+        available_models.sort(key=get_priority)
         
-        # 중복 제거 (최신 버전만 유지)
+        # 중복 제거 (날짜 버전 중 가장 최근 것만)
         unique_models = []
-        seen_base_names = set()
+        seen_bases = {}
         
-        for model in gpt_models:
-            base_name = model.split('-')[0] + '-' + model.split('-')[1]
-            if base_name not in seen_base_names:
-                unique_models.append(model)
-                seen_base_names.add(base_name)
+        for model in available_models:
+            # 기본 모델명 추출 (날짜/버전 제거)
+            base = model
+            for suffix in ['-preview', '-latest']:
+                base = base.replace(suffix, '')
+            
+            # 날짜 패턴 제거 (예: -20241120, -2024-11-20)
+            import re
+            base = re.sub(r'-\d{8}$', '', base)
+            base = re.sub(r'-\d{4}-\d{2}-\d{2}$', '', base)
+            
+            # 같은 base가 이미 있으면 더 긴 이름 선택 (보통 최신)
+            if base not in seen_bases or len(model) > len(seen_bases[base]):
+                seen_bases[base] = model
         
-        if not unique_models:
-            return False, [], "사용 가능한 GPT 모델을 찾을 수 없습니다."
+        unique_models = list(seen_bases.values())
+        unique_models.sort(key=get_priority)
         
         return True, unique_models, ""
         
@@ -243,24 +260,28 @@ def validate_api_key(api_key: str) -> tuple:
         (is_valid, message, available_models)
     """
     try:
-        from openai import OpenAI
-        
-        client = OpenAI(api_key=api_key)
-        
-        # 1. 간단한 API 호출로 검증
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": "test"}],
-            max_tokens=5
-        )
-        
-        # 2. 사용 가능한 모델 조회
+        # 모델 목록 조회로 검증 (chat completion보다 권한 요구사항 낮음)
         success, models, error = get_available_models(api_key)
         
         if not success:
-            return True, f"✅ API 키는 유효하지만 모델 조회 실패: {error}", []
+            return False, error, []
+        
+        if len(models) == 0:
+            return False, "❌ 사용 가능한 모델이 없습니다.", []
         
         return True, f"✅ API 키가 유효합니다! ({len(models)}개 모델 사용 가능)", models
+        
+    except Exception as e:
+        error_msg = str(e)
+        
+        if "Incorrect API key" in error_msg or "invalid_api_key" in error_msg:
+            return False, "❌ 잘못된 API 키입니다. 다시 확인해주세요.", []
+        elif "insufficient_quota" in error_msg:
+            return False, "⚠️ API 키는 유효하지만 크레딧이 부족합니다.", []
+        elif "403" in error_msg or "Forbidden" in error_msg:
+            return False, "❌ API 키 권한이 부족합니다. 키 권한을 확인해주세요.", []
+        else:
+            return False, f"❌ API 키 검증 실패: {error_msg}", []
         
     except Exception as e:
         error_msg = str(e)
@@ -875,12 +896,34 @@ def main():
                 
                 # 모델 설명
                 model_descriptions = {
-                    'gpt-4o': '🚀 최신 모델 (가장 강력, 비쌈)',
-                    'gpt-4o-mini': '⚡ 경량 모델 (빠르고 저렴, 권장)',
-                    'gpt-4-turbo': '💎 고성능 모델 (빠른 GPT-4)',
-                    'gpt-4': '🏆 표준 GPT-4 (높은 품질)',
-                    'gpt-3.5-turbo': '💰 가성비 모델 (저렴)'
+                    'o3': '🌟 o3 시리즈 (최첨단 추론 모델)',
+                    'o3-mini': '🌟 o3-mini (경량 추론 모델)',
+                    'o1': '🧠 o1 시리즈 (고급 추론 모델)',
+                    'o1-mini': '🧠 o1-mini (경량 추론 모델)',
+                    'o1-preview': '🧪 o1 프리뷰 (베타)',
+                    'gpt-5': '⚡ GPT-5 (차세대 모델)',
+                    'gpt-5-turbo': '⚡ GPT-5 Turbo (고속)',
+                    'gpt-4o': '🚀 GPT-4o (가장 강력)',
+                    'gpt-4o-mini': '⚡ GPT-4o-mini (빠르고 저렴, 권장)',
+                    'gpt-4-turbo': '💎 GPT-4 Turbo (고성능)',
+                    'gpt-4': '🏆 GPT-4 (높은 품질)',
+                    'gpt-3.5-turbo': '💰 GPT-3.5 Turbo (가성비)',
+                    'gpt-3.5': '💰 GPT-3.5 (기본)'
                 }
+                
+                # format 함수: 모델명으로 설명 찾기
+                def get_model_display(model_name):
+                    # 정확히 매칭되는 설명 찾기
+                    if model_name in model_descriptions:
+                        return f"{model_descriptions[model_name]} - {model_name}"
+                    
+                    # 부분 매칭 (예: gpt-4o-2024-11-20 → gpt-4o)
+                    for key in model_descriptions.keys():
+                        if model_name.startswith(key):
+                            return f"{model_descriptions[key]} - {model_name}"
+                    
+                    # 매칭 안되면 모델명만
+                    return model_name
                 
                 # 기본값 설정
                 if st.session_state.selected_gpt_model not in available_models:
@@ -897,7 +940,7 @@ def main():
                     "사용할 모델",
                     options=available_models,
                     index=available_models.index(st.session_state.selected_gpt_model),
-                    format_func=lambda x: f"{model_descriptions.get(x, x)} - {x}",
+                    format_func=get_model_display,
                     help="API 키로 사용 가능한 모델 중 선택하세요"
                 )
                 
@@ -905,11 +948,18 @@ def main():
                 st.session_state.selected_gpt_model = selected_gpt_model
                 
                 # 선택한 모델 정보 표시
+                # 설명 찾기
+                display_desc = "설명 없음"
+                for key, desc in model_descriptions.items():
+                    if selected_gpt_model.startswith(key):
+                        display_desc = desc
+                        break
+                
                 st.markdown(f"""
                 <div class="model-info">
                     🎯 <b>선택된 모델</b><br>
                     • {selected_gpt_model}<br>
-                    • {model_descriptions.get(selected_gpt_model, '설명 없음')}
+                    • {display_desc}
                 </div>
                 """, unsafe_allow_html=True)
                 
