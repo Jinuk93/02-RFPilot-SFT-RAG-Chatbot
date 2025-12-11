@@ -122,7 +122,7 @@ python src/evaluation/run_experiment.py
 
 | 구분 | 자료명 | 링크 |
 | :--- | :--- | :---: |
-| **🔬 연구** | **프로젝트 후속 연구 (QLoRA RAG)** | [GitHub Link](https://github.com/Dongjin-1203/QLoRA_RAG_test) |
+| **🔬 연구** | **프로젝트 후속 연구 (QLoRA RAG)** | [GitHub Link](https://github.com/Jinuk93/QLoRA_RAG_test/blob/main/README.md) |
 | **📑 보고서** | **프로젝트 최종 보고서 (PDF)** | [다운로드](https://drive.google.com/file/d/1p3HHeugJmaiJP4AQpxZZEzAiAngtaHr8/view?usp=sharing) |
 | **📢 발표** | **최종 발표 자료 (PPT)** | [다운로드](https://drive.google.com/file/d/1QM88Ayztv5TNaxTXi0z1Xhy6ngHLLKUm/view?usp=sharing) |
 | **📝 회고** | **지동진** - 개인 협업 일지 & 블로그 회고 | [Notion](https://www.notion.so/2a2e8d29749a80faa726fc13b879720d) / [blog](https://velog.io/@hambur1203/%EB%B6%80%ED%8A%B8%EC%BA%A0%ED%94%84-3%EC%A3%BC-RAG-%EC%B1%97%EB%B4%87-%EA%B0%9C%EB%B0%9C-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8-%ED%9A%8C%EA%B3%A0-%EC%B4%88%EC%8B%AC%EC%9D%B4-%EC%A4%91%EC%9A%94%ED%95%98%EB%8B%A4) |
