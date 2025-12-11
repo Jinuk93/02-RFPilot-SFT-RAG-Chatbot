@@ -122,7 +122,6 @@ python src/evaluation/run_experiment.py
 
 | 구분 | 자료명 | 링크 |
 | :--- | :--- | :---: |
-| **🔬 연구** | **프로젝트 후속 연구 (QLoRA RAG)** | [GitHub Link](https://github.com/Jinuk93/QLoRA_RAG_test/blob/main/README.md) |
 | **📑 보고서** | **프로젝트 최종 보고서 (PDF)** | [다운로드](https://drive.google.com/file/d/1p3HHeugJmaiJP4AQpxZZEzAiAngtaHr8/view?usp=sharing) |
 | **📢 발표** | **최종 발표 자료 (PPT)** | [다운로드](https://drive.google.com/file/d/1QM88Ayztv5TNaxTXi0z1Xhy6ngHLLKUm/view?usp=sharing) |
 | **📝 회고** | **지동진** - 개인 협업 일지 & 블로그 회고 | [Notion](https://www.notion.so/2a2e8d29749a80faa726fc13b879720d) / [blog](https://velog.io/@hambur1203/%EB%B6%80%ED%8A%B8%EC%BA%A0%ED%94%84-3%EC%A3%BC-RAG-%EC%B1%97%EB%B4%87-%EA%B0%9C%EB%B0%9C-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8-%ED%9A%8C%EA%B3%A0-%EC%B4%88%EC%8B%AC%EC%9D%B4-%EC%A4%91%EC%9A%94%ED%95%98%EB%8B%A4) |
@@ -132,7 +131,20 @@ python src/evaluation/run_experiment.py
 
 ---
 
-## 9. 프로젝트 구조 (Project Structure)
+## 9. 심화 연구 (Post-Project Research)
+
+| 구분 | 주제 | 링크 |
+| :--- | :--- | :---: |
+| **🧪 실험 및 분석** | **SFT vs RAG vs SFT+RAG(Hybrid) 성능 비교 및 하이브리드 최적화 실험** | [GitHub Link](https://github.com/Jinuk93/QLoRA_RAG_test/blob/main/README.md) |
+
+> **💡 연구 배경**
+>
+> 프로젝트 진행 당시 RAG(검색 증강 생성) 기술만으로는 답변의 일관성을 유지하거나 도메인 특화 용어를 완벽히 처리하는 데 한계가 있음을 느꼈습니다.
+> 이러한 미비점을 보완하고자 프로젝트 종료 후, **SFT(Fine-Tuning) 모델과 RAG 시스템의 성능을 정량적으로 비교하고 분석하는 독자적인 연구**를 추가로 진행했습니다.
+
+---
+
+## 10. 프로젝트 구조 (Project Structure)
 ```bash
 CODEIT-AI-1TEAM-LLM-PROJECT/
 ├── main.py                  # 🚀 실행 진입점
