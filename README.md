@@ -1,20 +1,8 @@
 <div align="center">
-
+  
 # 📑 B2G 입찰지원 전문 컨설팅 솔루션 : RFPilot
 **"수백 장의 제안요청서, 이제 읽지 말고 질문하세요."**
-
-<br>
-
-<img src="https://img.shields.io/badge/Python-3.12.3-3776AB?logo=python&logoColor=white">
-<img src="https://img.shields.io/badge/LangChain-v0.2-1C3C3C?logo=langchain&logoColor=white">
-<img src="https://img.shields.io/badge/Streamlit-App-FF4B4B?logo=streamlit&logoColor=white">
-<img src="https://img.shields.io/badge/License-MIT-green">
-
 </div>
-
-# 📑 B2G 입찰지원 전문 컨설팅 솔루션
-> **B2G 입찰지원 전문 컨설팅 솔루션 – 'RFPilot'**
-> **"수백 장의 제안요청서, 이제 읽지 말고 질문하세요."**
 
 
 ## 1. 챗봇 서비스 시연 (Demo)
@@ -38,27 +26,28 @@ RAG 시스템이 문서를 어떻게 청킹하고 검색하는지 시각화하�
 
 | 구분 | 상세 내용 |
 | :--- | :--- |
-| **<br>배경 및 문제 정의** | • **배경** : 매일 수백 건의 기업 및 정부 제안요청서(RFP)가 게시됨.<br>• **문제** : 요청서 당 수십 페이지가 넘는 문건을 일일이 검토하는 것은 물리적으로 불가능하며, 핵심 정보를 놓칠 위험이 큼.<br>• **비효율** : 단순 문서 검토에 과도한 시간이 소요되어 전략 수립 등 고부가가치 업무에 집중하기 어려움 |
-| **목표** | • **자동화** : 사용자의 질문에 실시간으로 응답하는 AI 시스템 구축.<br>• **요약 및 탐색** : 관련 제안서를 빠르게 탐색하고 핵심 요약 정보를 제공.<br>• **생산성** : 컨설턴트의 단순 업무 시간을 단축하고 업무 효율성을 획기적으로 향상 |
+| **<br>배경 및 문제 정의** | • **배경** <br>: 매일 수백 건의 기업 및 정부 제안요청서(RFP)가 게시됨<br>• **문제** <br>: 요청서 당 수십 페이지가 넘는 문건을 일일이 검토하는 것은 물리적으로 불가능하며, 핵심 정보를 놓칠 위험이 큼<br>• **비효율** <br>: 단순 문서 검토에 과도한 시간이 소요되어 전략 수립 등 고부가가치 업무에 집중하기 어려움 |
+| **목표** | • **자동화** <br>: 사용자의 질문에 실시간으로 응답하는 AI 시스템 구축<br>• **요약 및 탐색** <br>: 관련 제안서를 빠르게 탐색하고 핵심 요약 정보를 제공<br>• **생산성** <br>: 컨설턴트의 단순 업무 시간을 단축하고 업무 효율성을 획기적으로 향상 |
 | **기대 효과** | • RAG 시스템을 통해 신뢰할 수 있는 정보를 신속하게 제공 <br>• 제안서 검토 시간 단축을 통해 컨설팅 본연의 업무에 집중할 수 있는 환경 조성 |
 
 ---
 
 ## 3. 시스템 아키텍처 (Architecture)
-사용자의 질문 의도를 파악(Router)하고, 최적의 문서를 검색(Retriever)하여 답변을 생성(Generator)하는 구조입니다.
-<img width="100%" alt="Architecture" src="[https://github.com/user-attachments/assets/6fd35353-7d88-464f-8d75-ff33fabc206b](https://github.com/user-attachments/assets/6fd35353-7d88-464f-8d75-ff33fabc206b)" />
 
----
+사용자의 질문 의도를 파악(Router)하고, 최적의 문서를 검색(Retriever)하여 답변을 생성(Generator)하는 구조입니다. <br>
+
+<img width="4208" height="2004" alt="image" src="https://github.com/user-attachments/assets/6fd35353-7d88-464f-8d75-ff33fabc206b" />
+
 
 ## 4. 팀 소개 (Team)
 > **"기본에 충실하며, 실전에서 통하는 서비스를 만들기 위해 끊임없이 노력했습니다."**
 
 | 프로필 | 이름 / 연락처 | 상세 역할 분담 (Role) |
 | :---: | :---: | :--- |
-| <img src="[https://github.com/user-attachments/assets/b9f1a52f-4304-496d-a19c-2d6b4775a5c3](https://github.com/user-attachments/assets/b9f1a52f-4304-496d-a19c-2d6b4775a5c3)" width="100"> | **지동진**<br>_(PM / AI Lead)_<br>[![Github](https://img.shields.io/badge/GitHub-black?logo=github)]([https://github.com/Dongjin-1203](https://github.com/Dongjin-1203))<br>![Gmail](https://img.shields.io/badge/Gmail-D14836?logo=gmail&logoColor=white) | • **프로젝트 총괄**: 전체 기획 및 일정 관리<br>• **Retrieval System**: Retriever 및 Query Router 설계 및 구현<br>• **Engineering**: 로컬 임베딩 모델 최적화, 동적 프롬프트 적용<br>• **DevOps**: Streamlit 대시보드 개발, 배포 환경 구축 및 시스템 통합 |
-| <img src="https://avatars.githubusercontent.com/u/80089860?v=4.png" width="100"> | **김진욱**<br>_(Data Scientist)_<br>[![Github](https://img.shields.io/badge/GitHub-black?logo=github)](https://github.com/Jinuk93)<br>![Gmail](https://img.shields.io/badge/Gmail-D14836?logo=gmail&logoColor=white) | • **Data Pipeline**: 데이터 전처리 및 관리 파이프라인 총괄<br>• **Chunking Strategy**: 문서 구조에 맞는 청킹 전략 수립 및 구현<br>• **Modeling**: 모델 Baseline 제공 및 양자화(Quantization) 최적화 |
-| <img src="https://github.com/user-attachments/assets/4e635630-f00c-4026-bb1d-c73ec05f37c8" width="100"> | **이유노**<br>_(AI Engineer)_<br>[![Github](https://img.shields.io/badge/GitHub-black?logo=github)](https://github.com/Leeyuno0419)<br>![Gmail](https://img.shields.io/badge/Gmail-D14836?logo=gmail&logoColor=white) | • **OpenAI API**: GPT 모델 연동 및 고도화 개발<br>• **Prompt Engineering**: API 모델에 최적화된 프롬프트 설계 및 테스트<br>• **Optimization**: 쿼리 최적화 및 응답 품질 개선 |
-| <img src="https://github.com/user-attachments/assets/088a073c-cf1c-40a1-97fb-1d2c1f1b8794" width="100"> | **박지윤**<br>_(AI Engineer)_<br>[![Github](https://img.shields.io/badge/GitHub-black?logo=github)](https://github.com/krapnuyij)<br>![Gmail](https://img.shields.io/badge/Gmail-D14836?logo=gmail&logoColor=white) | • **Local LLM**: HuggingFace 기반 로컬 모델(Llama-3 등) 개발<br>• **Prompt Engineering**: 로컬 모델 전용 프롬프트 최적화<br>• **Evaluation**: 모델 간 성능 비교 실험 및 평가 수행 |
+| <img src="https://github.com/user-attachments/assets/b9f1a52f-4304-496d-a19c-2d6b4775a5c3" width="100"> | **지동진**<br>_(PM / AI Lead)_<br>[![Github](https://img.shields.io/badge/GitHub-black?logo=github)](https://github.com/Dongjin-1203)<br>![Gmail](https://img.shields.io/badge/Gmail-D14836?logo=gmail&logoColor=white) | • **프로젝트 총괄** : 전체 기획 및 일정 관리<br>• **Retrieval System** : Retriever 및 Query Router 설계 및 구현<br>• **Engineering** : 로컬 임베딩 모델 최적화, 동적 프롬프트 적용<br>• **DevOps** : Streamlit 대시보드 개발, 배포 환경 구축 및 시스템 통합 |
+| <img src="https://avatars.githubusercontent.com/u/80089860?v=4.png" width="100"> | **김진욱**<br>_(Data Scientist)_<br>[![Github](https://img.shields.io/badge/GitHub-black?logo=github)](https://github.com/Jinuk93)<br>![Gmail](https://img.shields.io/badge/Gmail-D14836?logo=gmail&logoColor=white) | • **Data Pipeline** : 데이터 전처리 및 관리 파이프라인 총괄<br>• **Chunking Strategy** : 문서 구조에 맞는 청킹 전략 수립 및 구현<br>• **Modeling** : 모델 Baseline 제공 및 양자화(Quantization) 최적화 |
+| <img src="https://github.com/user-attachments/assets/4e635630-f00c-4026-bb1d-c73ec05f37c8" width="100"> | **이유노**<br>_(AI Engineer)_<br>[![Github](https://img.shields.io/badge/GitHub-black?logo=github)](https://github.com/Leeyuno0419)<br>![Gmail](https://img.shields.io/badge/Gmail-D14836?logo=gmail&logoColor=white) | • **OpenAI API** : GPT 모델 연동 및 고도화 개발<br>• **Prompt Engineering** : API 모델에 최적화된 프롬프트 설계 및 테스트<br>• **Optimization** : 쿼리 최적화 및 응답 품질 개선 |
+| <img src="https://github.com/user-attachments/assets/088a073c-cf1c-40a1-97fb-1d2c1f1b8794" width="100"> | **박지윤**<br>_(AI Engineer)_<br>[![Github](https://img.shields.io/badge/GitHub-black?logo=github)](https://github.com/krapnuyij)<br>![Gmail](https://img.shields.io/badge/Gmail-D14836?logo=gmail&logoColor=white) | • **Local LLM** : HuggingFace 기반 로컬 모델(Llama-3 등) 개발<br>• **Prompt Engineering** : 로컬 모델 전용 프롬프트 최적화<br>• **Evaluation** : 모델 간 성능 비교 실험 및 평가 수행 |
 
 ---
 
@@ -168,3 +157,8 @@ CODEIT-AI-1TEAM-LLM-PROJECT/
 │   └── utils/               # 공통 함수 모듈
 └── README.md
 ```
+
+<img src="https://img.shields.io/badge/Python-3.12.3-3776AB?logo=python&logoColor=white">
+<img src="https://img.shields.io/badge/LangChain-v0.2-1C3C3C?logo=langchain&logoColor=white">
+<img src="https://img.shields.io/badge/Streamlit-App-FF4B4B?logo=streamlit&logoColor=white">
+<img src="https://img.shields.io/badge/License-MIT-green">
