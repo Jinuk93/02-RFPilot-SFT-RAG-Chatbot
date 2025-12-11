@@ -58,17 +58,13 @@ RAG 시스템이 문서를 어떻게 청킹하고 검색하는지 시각화하�
 
 ## 6. 사용 방법 (Getting Started)
 
-### 🌐 웹 서비스 사용 (일반 사용자)
-- **데모 사이트**: [HuggingFace Space 바로가기](https://huggingface.co/spaces/Dongjin1203/RFP_summary_chatbot)
-- **사용법**: 링크 접속 → 질문 입력 (예: "사업 기간이 12개월 이하인 사업 찾아줘") → 답변 확인
+| 환경 구분 | 상세 내용 및 실행 방법 |
+| :---: | :--- |
+| **웹 서비스**<br>*(일반 사용자)* | **설치 없이 브라우저에서 바로 사용 가능합니다.**<br>**- [HuggingFace 데모 사이트 바로가기](https://huggingface.co/spaces/Dongjin1203/RFP_summary_chatbot)**<br>- **사용법** : 링크 접속 → 질문 입력 (예: "사업 기간이 12개월 이하인 사업 찾아줘") |
+| **로컬 개발**<br>*(개발자)* | **내 컴퓨터에서 직접 코드를 실행하고 테스트합니다.**<br>- **필수 준비** : Python 3.12.3, Poetry, Git<br>- **데이터셋** : **[필수 데이터 다운로드 링크](https://drive.google.com/file/d/187QnN2VeCfa-nyFMcv8ZtBJP0JxTaY4U/view?usp=drive_link)** (다운로드 후 `data/` 폴더에 위치)<br>- **실행 커맨드** :<br>`poetry install` → `.env` 키 설정 → `python main.py` |
 
-### 💻 로컬 개발 환경 구축 (개발자용)
 
-**1. Prerequisites**
-- Python 3.12.3 / Poetry 설치 / Git Clone
-- [데이터셋 다운로드 (필수)](https://drive.google.com/file/d/187QnN2VeCfa-nyFMcv8ZtBJP0JxTaY4U/view?usp=drive_link)
-
-**2. 환경 변수 설정 (.env)**
+<br> **환경 변수 설정 (.env)**
 프로젝트 루트에 `.env` 파일을 생성하고 아래 내용을 입력하세요.
 ```env
 # 필수: OpenAI API (GPT 모델 사용 시)
@@ -87,7 +83,7 @@ GGUF_N_CTX=4096
 GGUF_N_GPU_LAYERS=35
 ```
 
-**3. 설치 및 실행**
+<br> **설치 및 실행**
 ```powershell
 # 1. 의존성 설치
 cd Codeit-AI-1team-LLM-project
@@ -113,12 +109,12 @@ python src/evaluation/run_experiment.py
 
 | 분류 | 스택 & 라이브러리 |
 | :--- | :--- |
-| **언어** | <img src="[https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)" /> |
-| **프레임워크** | <img src="[https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=for-the-badge&logo=PyTorch&logoColor=white](https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=for-the-badge&logo=PyTorch&logoColor=white)" /> <img src="[https://img.shields.io/badge/huggingface-%23FFD21E.svg?style=for-the-badge&logo=huggingface&logoColor=white](https://img.shields.io/badge/huggingface-%23FFD21E.svg?style=for-the-badge&logo=huggingface&logoColor=white)" /> <img src="[https://img.shields.io/badge/Streamlit-%23FE4B4B.svg?style=for-the-badge&logo=streamlit&logoColor=white](https://img.shields.io/badge/Streamlit-%23FE4B4B.svg?style=for-the-badge&logo=streamlit&logoColor=white)" /> |
-| **AI / LLM** | <img src="[https://img.shields.io/badge/-OpenAI%20API-eee?style=flat-square&logo=openai&logoColor=412991](https://img.shields.io/badge/-OpenAI%20API-eee?style=flat-square&logo=openai&logoColor=412991)" /> <img src="[https://img.shields.io/badge/LangChain-ffffff?logo=langchain&logoColor=green](https://img.shields.io/badge/LangChain-ffffff?logo=langchain&logoColor=green)" /> |
-| **DB / Cloud** | <img src="[https://img.shields.io/badge/ChromaDB-Vector%20Database-orange](https://img.shields.io/badge/ChromaDB-Vector%20Database-orange)" /> <img src="[https://img.shields.io/badge/GoogleCloud-%234285F4.svg?style=for-the-badge&logo=google-cloud&logoColor=white](https://img.shields.io/badge/GoogleCloud-%234285F4.svg?style=for-the-badge&logo=google-cloud&logoColor=white)" /> <img src="[https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)" /> <img src="[https://img.shields.io/badge/huggingface_space-yellow?logo=huggingface](https://img.shields.io/badge/huggingface_space-yellow?logo=huggingface)" /> |
-| **Tools** | <img src="[https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white)" /> <img src="[https://img.shields.io/badge/jupyter-%23FA0F00.svg?style=for-the-badge&logo=jupyter&logoColor=white](https://img.shields.io/badge/jupyter-%23FA0F00.svg?style=for-the-badge&logo=jupyter&logoColor=white)" /> <img src="[https://img.shields.io/badge/weightsandbiases-%23FFBE00?style=for-the-badge&logo=wandb-%23FFBE00&logoColor=%23FFBE00](https://img.shields.io/badge/weightsandbiases-%23FFBE00?style=for-the-badge&logo=wandb-%23FFBE00&logoColor=%23FFBE00)" /> |
-| **협업** | <img src="[https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)" /> <img src="[https://img.shields.io/badge/Notion-%23000000.svg?style=for-the-badge&logo=notion&logoColor=white](https://img.shields.io/badge/Notion-%23000000.svg?style=for-the-badge&logo=notion&logoColor=white)" /> <img src="[https://img.shields.io/badge/Google%20Drive-4285F4?style=for-the-badge&logo=googledrive&logoColor=white](https://img.shields.io/badge/Google%20Drive-4285F4?style=for-the-badge&logo=googledrive&logoColor=white)" /> |
+| **언어** | ![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white) |
+| **프레임워크** | ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=flat-square&logo=streamlit&logoColor=white) ![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=flat-square&logo=pytorch&logoColor=white) |
+| **AI / LLM** | ![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=flat-square&logo=openai&logoColor=white) ![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=flat-square&logo=langchain&logoColor=white) ![HuggingFace](https://img.shields.io/badge/HuggingFace-FFD21E?style=flat-square&logo=huggingface&logoColor=black) |
+| **DB / Cloud** | ![ChromaDB](https://img.shields.io/badge/ChromaDB-cc5c29?style=flat-square) ![Google Cloud](https://img.shields.io/badge/Google_Cloud-4285F4?style=flat-square&logo=google-cloud&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white) |
+| **Tools** | ![Git](https://img.shields.io/badge/Git-F05032?style=flat-square&logo=git&logoColor=white) ![Jupyter](https://img.shields.io/badge/Jupyter-F37626?style=flat-square&logo=jupyter&logoColor=white) ![WandB](https://img.shields.io/badge/Weights_&_Biases-FFBE00?style=flat-square&logo=WeightsandBiases&logoColor=black) |
+| **협업** | ![Notion](https://img.shields.io/badge/Notion-000000?style=flat-square&logo=notion&logoColor=white) ![Discord](https://img.shields.io/badge/Discord-5865F2?style=flat-square&logo=discord&logoColor=white) ![Google Drive](https://img.shields.io/badge/Google_Drive-4285F4?style=flat-square&logo=googledrive&logoColor=white) |
 
 ---
 
@@ -130,7 +126,7 @@ python src/evaluation/run_experiment.py
 | **📑 보고서** | **프로젝트 최종 보고서 (PDF)** | [다운로드](https://drive.google.com/file/d/1p3HHeugJmaiJP4AQpxZZEzAiAngtaHr8/view?usp=sharing) |
 | **📢 발표** | **최종 발표 자료 (PPT)** | [다운로드](https://drive.google.com/file/d/1QM88Ayztv5TNaxTXi0z1Xhy6ngHLLKUm/view?usp=sharing) |
 | **📝 회고** | **지동진** - 개인 협업 일지 & 블로그 회고 | [Notion](https://www.notion.so/2a2e8d29749a80faa726fc13b879720d) / [Velog](https://velog.io/@hambur1203/%EB%B6%80%ED%8A%B8%EC%BA%A0%ED%94%84-3%EC%A3%BC-RAG-%EC%B1%97%EB%B4%87-%EA%B0%9C%EB%B0%9C-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8-%ED%9A%8C%EA%B3%A0-%EC%B4%88%EC%8B%AC%EC%9D%B4-%EC%A4%91%EC%9A%94%ED%95%98%EB%8B%A4) |
-| | **김진욱** - 개인 협업 일지 | [Notion](https://www.notion.so/2a2e8d29749a812b96d9d8a847323ad6) |
+| | **김진욱** - 개인 협업 일지 & 블로그 회고 | [Notion](https://www.notion.so/2a2e8d29749a812b96d9d8a847323ad6) |/ [tistory](https://nugiwiki.tistory.com/tag/%EC%BD%94%EB%93%9C%EC%9E%87%20%EC%A4%91%EA%B8%89%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8) |
 | | **이유노** - 개인 협업 일지 | [Notion](https://www.notion.so/2a2e8d29749a81dea0b5dec22b9d1663) |
 | | **박지윤** - 개인 협업 일지 | [Notion](https://www.notion.so/2a2e8d29749a8186aff7e0c80534f18f) |
 
@@ -157,8 +153,3 @@ CODEIT-AI-1TEAM-LLM-PROJECT/
 │   └── utils/               # 공통 함수 모듈
 └── README.md
 ```
-
-<img src="https://img.shields.io/badge/Python-3.12.3-3776AB?logo=python&logoColor=white">
-<img src="https://img.shields.io/badge/LangChain-v0.2-1C3C3C?logo=langchain&logoColor=white">
-<img src="https://img.shields.io/badge/Streamlit-App-FF4B4B?logo=streamlit&logoColor=white">
-<img src="https://img.shields.io/badge/License-MIT-green">
