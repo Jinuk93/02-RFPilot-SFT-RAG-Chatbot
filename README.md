@@ -124,6 +124,7 @@ python src/evaluation/run_experiment.py
 | :--- | :--- | :---: |
 | **📑 보고서** | **프로젝트 최종 보고서 (PDF)** | [다운로드](https://drive.google.com/file/d/1p3HHeugJmaiJP4AQpxZZEzAiAngtaHr8/view?usp=sharing) |
 | **📢 발표** | **최종 발표 자료 (PPT)** | [다운로드](https://drive.google.com/file/d/1QM88Ayztv5TNaxTXi0z1Xhy6ngHLLKUm/view?usp=sharing) |
+| **🧪 실험 및 분석** | **SFT VS RAG 실험 및 분석자료 (PDF)** | [다운로드](https://drive.google.com/file/d/1GXw2UNt99tie1ZciyKAdyaAxWYkc1GGe/view?usp=sharing) |
 | **📝 회고** | **지동진** - 개인 협업 일지 & 블로그 회고 | [Notion](https://www.notion.so/2a2e8d29749a80faa726fc13b879720d) / [blog](https://velog.io/@hambur1203/%EB%B6%80%ED%8A%B8%EC%BA%A0%ED%94%84-3%EC%A3%BC-RAG-%EC%B1%97%EB%B4%87-%EA%B0%9C%EB%B0%9C-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8-%ED%9A%8C%EA%B3%A0-%EC%B4%88%EC%8B%AC%EC%9D%B4-%EC%A4%91%EC%9A%94%ED%95%98%EB%8B%A4) |
 | | **김진욱** - 개인 협업 일지 & 블로그 회고 | [Notion](https://www.notion.so/2a2e8d29749a812b96d9d8a847323ad6) / [blog](https://nugiwiki.tistory.com/tag/%EC%BD%94%EB%93%9C%EC%9E%87%20%EC%A4%91%EA%B8%89%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8) |
 | | **이유노** - 개인 협업 일지 | [Notion](https://www.notion.so/2a2e8d29749a81dea0b5dec22b9d1663) |
@@ -135,7 +136,7 @@ python src/evaluation/run_experiment.py
 
 | 구분 | 주제 | 링크 |
 | :--- | :--- | :---: |
-| **🧪 실험 및 분석** | **SFT vs RAG vs SFT+RAG(Hybrid) 성능 비교 및 하이브리드 최적화 실험** | [GitHub Link](https://github.com/Jinuk93/QLoRA_RAG_test/blob/main/README.md) |
+| **🧪 실험 및 분석** | **SFT vs RAG 성능 비교 실험 및 분석** | [GitHub Link](https://github.com/Jinuk93/02-RFPilot-SFT-RAG-Chatbot/blob/main/Research/B2G%20RFP%20%EB%8F%84%EB%A9%94%EC%9D%B8%20%EC%A7%88%EC%9D%98%EC%9D%91%EB%8B%B5%20SFT%20vs%20RAG%20%EB%B9%84%EA%B5%90%20%EC%97%B0%EA%B5%AC.pdf) |
 
 > **💡 연구 배경**
 >
@@ -148,6 +149,7 @@ python src/evaluation/run_experiment.py
 ```bash
 CODEIT-AI-1TEAM-LLM-PROJECT/
 ├── main.py                  # 🚀 실행 진입점
+├── Research/                # 🧪 심화 연구 보고서 및 자료
 ├── models/                  # GGUF 모델 (선택)
 ├── chroma_db/               # 벡터 데이터베이스
 ├── data/                    # 문서 및 벡터DB 저장 폴더
